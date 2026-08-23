@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Surface Anatomy Mapper</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Georgia,'Times New Roman',serif;background:#16283a;min-height:100vh;padding:10px;color:#1b2b3a}
+.container{max-width:580px;margin:0 auto;background:#fff;padding:18px;border-radius:6px;box-shadow:0 6px 30px rgba(0,0,0,.35)}
+h1{text-align:center;font-size:20px;color:#16283a}
+.sub{text-align:center;font-size:11.5px;color:#7b8b9a;font-style:italic;margin:4px 0 12px;padding-bottom:10px;border-bottom:2px solid #16283a}
+h2{font-size:15px;margin:10px 0 6px}
+.screen{display:none}.screen.active{display:block}
+button{width:100%;padding:12px;margin:6px 0;background:#16283a;color:#fff;border:none;border-radius:4px;font-size:14px;font-family:Georgia,serif;font-weight:bold;cursor:pointer}
+button:disabled{background:#c2ccd4}
+.green{background:#1d6f42}.gray{background:#7b8b9a}.amber{background:#8a6d1f}
+.small{width:auto;padding:7px 12px;font-size:12px;margin:0}
+.row{display:flex;gap:7px}.row>*{flex:1}
+input[type=file]{display:none}
+.photo-item{background:#f3f5f7;padding:9px;margin:5px 0;border-radius:4px;display:flex;justify-content:space-between;align-items:center;font-size:13.5px}
+#canvas{width:100%;display:block;margin:8px 0;border:1px solid #c9d4de;background:#fff;touch-action:manipulation}
+.instr{background:#eef3f8;border-left:4px solid #16283a;padding:9px 11px;font-size:13px;margin:8px 0;line-height:1.5}
+.sidebtns button,.toggles button{background:#c2ccd4;color:#41525f}
+.sidebtns .on,.toggles .on{background:#16283a;color:#fff}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:999;align-items:center;justify-content:center;padding:18px}
+.modal.active{display:flex}
+.modal-content{background:#fff;padding:18px;border-radius:6px;max-width:350px;width:100%}
+.modal-content label{display:block;font-weight:bold;margin-top:9px;font-size:12.5px}
+.modal-content select,.modal-content input{width:100%;padding:8px;margin:4px 0;border:1px solid #c9d4de;border-radius:4px;font-family:Georgia,serif}
+.info{background:#eef3f8;padding:9px 11px;margin:8px 0;border-radius:4px;font-size:13px}
+.success{background:#e2f3e8;color:#14532d}.errbox{background:#fae3e5;color:#7f1d1d}
+.review-item{background:#f7f9fb;padding:10px;margin:7px 0;border-radius:4px;font-size:12.5px;border-left:4px solid #16283a;line-height:1.55}
+p{font-size:13px;color:#5b6b7a;margin:6px 0;line-height:1.5}
+</style></head><body>
+<div class="container">
+<h1>Surface Anatomy Mapper</h1>
+<div class="sub">Landmark-calibrated regional mapping &amp; structural reference</div>
+<div id="s1" class="screen active">
+  <h2>Step 1 &middot; Photographs</h2>
+  <p>Add clear photographs of the affected side. Best results when the ear, neck, and shoulder are all visible.</p>
+  <button onclick="document.getElementById('files').click()">Choose Photographs</button>
+  <div id="photoList"></div>
+  <button id="toS2" onclick="startWork()" disabled style="margin-top:12px">Continue →</button>
+  <input type="file" id="files" accept="image/*" multiple>
+</div>
+<div id="s2" class="screen">
+  <h2>Step 2 &middot; Landmarks &amp; Points <span id="pcount" style="font-weight:normal;color:#9aa8b5;font-size:12px"></span></h2>
+  <div class="row sidebtns">
+    <button class="small" id="sideL" onclick="setSide('left')">Left Side</button>
+    <button class="small" id="sideR" onclick="setSide('right')">Right Side</button>
+  </div>
+  <div class="instr" id="instr"></div>
+  <canvas id="canvas"></canvas>
+  <div class="row toggles"><button class="small" id="tgAll" onclick="toggleAll()">Show all regions</button></div>
+  <div class="row" id="skipRow" style="display:none"><button class="amber" onclick="skipPt()">Skip — not visible</button></div>
+  <div class="row"><button class="gray" onclick="undoPt()">Undo</button><button class="gray" onclick="recalib()">Restart landmarks</button></div>
+  <div class="row"><button onclick="prevPhoto()" id="prevBtn">← Previous</button><button onclick="nextPhoto()" id="nextBtn" class="green">Next →</button></div>
+</div>
+<div id="s3" class="screen">
+  <h2>Step 3 &middot; Review &amp; Generate</h2>
+  <div id="review"></div>
+  <button onclick="generateReport()" class="green">Generate Report (PDF)</button>
+  <button onclick="goScreen(2)" class="gray">← Back</button>
+  <div id="msg"></div>
+</div></div>
+<div id="modal" class="modal"><div class="modal-content">
+  <h2 style="margin-bottom:8px">Mark Tender Point</h2>
+  <div class="info">Region: <strong id="loc">—</strong></div>
+  <label>When does it hurt?</label>
+  <select id="trigger"><option value="">Select…</option><option>When touched</option><option>Random times</option><option>During stress</option><option>When moving</option><option>In cold</option></select>
+  <label>Character of pain</label>
+  <select id="type"><option value="">Select…</option><option>Sharp</option><option>Dull</option><option>Tension</option><option>Burning</option><option>Throbbing</option></select>
+  <label>Severity: <span id="num">5</span>/10</label>
+  <input type="range" id="sev" min="1" max="10" value="5" oninput="document.getElementById('num').textContent=this.value">
+  <button onclick="saveMark()">Save</button><button onclick="closeModal()" class="gray">Cancel</button>
+</div></div>
+<script>
+/* ===== regions.js ===== */
+/* =========================================================
+   LANDMARK-DEFINED SURFACE ANATOMY
+   Every boundary below is a line between two PALPABLE points
+   the user taps. No invented shapes.
+   ========================================================= */
+const LANDMARKS = [
+  {key:'mastoid',  name:'Mastoid process',
+   help:'The hard bony bump directly BEHIND the earlobe.', req:true},
+  {key:'nuchal',   name:'Base of skull (nuchal line)',
+   help:'Where the skull meets the neck at the BACK of the head, in line with the ear.', req:true},
+  {key:'c7',       name:'C7 spinous process',
+   help:'The most PROMINENT bump at the base of the neck when the head tips forward.', req:true},
+  {key:'acromion', name:'Acromion (shoulder tip)',
+   help:'The bony point at the very TOP-OUTER corner of the shoulder.', req:true},
+  {key:'sternal',  name:'Sternal notch',
+   help:'The soft hollow at the base of the throat between the collarbones.', req:false}
+];
+
+/* geometry helpers ------------------------------------------------ */
+function sub(a,b){ return [a[0]-b[0], a[1]-b[1]]; }
+function cross(a,b){ return a[0]*b[1]-a[1]*b[0]; }
+function sideOf(p,a,b){ return Math.sign(cross(sub(b,a), sub(p,a))); }
+function dot(a,b){ return a[0]*b[0]+a[1]*b[1]; }
+function len(a){ return Math.hypot(a[0],a[1]); }
+function distToSeg(p,a,b){
+  const ab=sub(b,a), ap=sub(p,a);
+  const t=Math.max(0,Math.min(1, dot(ap,ab)/(dot(ab,ab)||1e-9)));
+  return len(sub(p,[a[0]+ab[0]*t, a[1]+ab[1]*t]));
+}
+/* perpendicular signed distance normalised by a reference length */
+function normDist(p,a,b,ref){ return distToSeg(p,a,b)/ref; }
+
+/* build the real boundary lines from tapped landmarks -------------- */
+function buildBoundaries(L){
+  const B={};
+  B.scm      = [L.mastoid, L.sternal || L.acromion];      // SCM muscle course
+  B.trapEdge = [L.nuchal,  L.acromion];                   // trapezius free border
+  B.clavicle = L.sternal ? [L.sternal, L.acromion] : null;// clavicle
+  B.spine    = [L.nuchal,  L.c7];                         // cervical spinous line
+  B.ref      = len(sub(L.c7, L.mastoid)) || 1e-6;         // scale reference
+  return B;
+}
+
+/* classify a point into a clinical region ------------------------- */
+/* Band half-widths as a fraction of the mastoid->C7 reference length.
+   Derived from typical adult surface anatomy: SCM belly ~2.5cm wide,
+   spinous process line ~2cm, clavicle ~2cm, over a ~13cm reference. */
+const BAND = { scm:0.10, spine:0.11, clavicle:0.10 };
+
+function classify(p, L){
+  const B=buildBoundaries(L);
+  const ref=B.ref;
+
+  const postSign = sideOf(L.c7, B.scm[0], B.scm[1]);
+  const sPost = sideOf(p, B.scm[0], B.scm[1]) === postSign;
+  const trapSign = sideOf(L.c7, B.trapEdge[0], B.trapEdge[1]);
+  const overTrap = sideOf(p, B.trapEdge[0], B.trapEdge[1]) === trapSign;
+
+  const dSCM  = normDist(p, B.scm[0], B.scm[1], ref);
+  const dTrap = normDist(p, B.trapEdge[0], B.trapEdge[1], ref);
+  const dSpine= normDist(p, B.spine[0], B.spine[1], ref);
+  const dClav = B.clavicle ? normDist(p, B.clavicle[0], B.clavicle[1], ref) : 99;
+
+  const axis=sub(L.c7,L.mastoid);
+  const tAxis=Math.max(0,Math.min(1, dot(sub(p,L.mastoid),axis)/(dot(axis,axis)||1e-9)));
+
+  /* A point sitting ON a named structure-line belongs to that structure.
+     Choose the NEAREST qualifying band rather than testing in a fixed order. */
+  const bands=[
+    {r:'posterior_midline', d:dSpine, lim:BAND.spine},
+    {r:'scm_belly',         d:dSCM,   lim:BAND.scm},
+    {r:'supraclavicular',   d:dClav,  lim:BAND.clavicle}
+  ].filter(b=>b.d<b.lim).sort((a,b)=>(a.d/a.lim)-(b.d/b.lim));
+
+  let region, confidence;
+  if(bands.length){
+    region=bands[0].r;
+    const best=bands[0].d/bands[0].lim;
+    const second=bands.length>1 ? bands[1].d/bands[1].lim : 99;
+    confidence = (second-best)<0.25 ? 'moderate' : 'high';
+  } else if(!sPost){
+    region='anterior_triangle'; confidence='high';
+  } else if(overTrap){
+    region='trapezius_region'; confidence='high';
+  } else {
+    region = tAxis<0.62 ? 'occipital_triangle' : 'supraclavicular';
+    confidence='high';
+  }
+  /* borderline if it sits just outside a band */
+  const margin=Math.min(dSpine/BAND.spine, dSCM/BAND.scm, dClav/BAND.clavicle);
+  if(!bands.length && margin<1.25) confidence='moderate';
+
+  return {region, confidence, metrics:{dSCM,dTrap,dSpine,dClav,tAxis}};
+}
+
+
+/* ===== region_data.js ===== */
+/* =========================================================
+   REGION CONTENTS — standard surface-anatomy descriptions.
+   Listed SUPERFICIAL -> DEEP, as a clinician would palpate.
+   ========================================================= */
+const REGIONS = {
+  scm_belly:{
+    name:'Sternocleidomastoid (SCM) belly',
+    bounds:'The strap muscle running from the mastoid process behind the ear to the sternal notch and medial clavicle. Its borders are directly palpable.',
+    layers:[
+      {depth:'Superficial', items:[
+        {n:'Platysma', t:'Muscle', d:'Thin sheet of muscle just under the skin of the neck.'},
+        {n:'External jugular vein', t:'Vein', d:'Crosses the SCM obliquely; visible in some people.'},
+        {n:'Great auricular nerve', t:'Nerve', d:'Cutaneous nerve crossing the SCM toward the ear and jaw angle.'}]},
+      {depth:'Middle', items:[
+        {n:'Sternocleidomastoid', t:'Muscle', d:'The muscle itself. Rotates and flexes the neck; a very common site of trigger points.'}]},
+      {depth:'Deep', items:[
+        {n:'Carotid sheath', t:'Vessel bundle', d:'Contains the carotid artery, internal jugular vein, and vagus nerve (CN X).'},
+        {n:'Cervical plexus', t:'Nerve', d:'Nerve roots C1-C4 emerging behind the SCM.'}]}],
+    clinical:'SCM trigger points characteristically refer pain to the ear, jaw, temple, and behind the eye rather than staying local. Tenderness here is frequently postural.'
+  },
+  occipital_triangle:{
+    name:'Posterior cervical triangle — occipital (upper) part',
+    bounds:'Bounded in front by the posterior border of the SCM, behind by the front border of the trapezius, and below by the omohyoid muscle.',
+    layers:[
+      {depth:'Superficial', items:[
+        {n:'Platysma / investing fascia', t:'Fascia', d:'Thin covering layers over the triangle.'},
+        {n:'Cutaneous cervical plexus branches', t:'Nerve', d:'Lesser occipital and great auricular nerves supplying skin of the scalp/ear.'}]},
+      {depth:'Middle', items:[
+        {n:'Accessory nerve (CN XI)', t:'Nerve', d:'Crosses the triangle superficially — unusually exposed here. Supplies trapezius and SCM.'},
+        {n:'Cervical lymph nodes', t:'Lymphatic', d:'Chain of nodes along the posterior triangle.'}]},
+      {depth:'Deep (floor)', items:[
+        {n:'Levator scapulae', t:'Muscle', d:'Runs from upper cervical vertebrae to the top inner corner of the shoulder blade.'},
+        {n:'Splenius capitis', t:'Muscle', d:'Deep muscle running up to the base of the skull.'},
+        {n:'Scalene muscles', t:'Muscle', d:'Deep lateral neck muscles attaching to the first two ribs.'}]}],
+    clinical:'Because the accessory nerve runs superficially here, this region is unusually sensitive to pressure and strain. Sharp or shooting pain in this area raises the question of nerve irritation rather than pure muscle strain.'
+  },
+  supraclavicular:{
+    name:'Supraclavicular fossa (lower posterior triangle)',
+    bounds:'The hollow just above the collarbone, bounded by the SCM in front, the clavicle below, and the trapezius behind.',
+    layers:[
+      {depth:'Superficial', items:[
+        {n:'Supraclavicular nerves', t:'Nerve', d:'Cutaneous nerves crossing the clavicle to supply skin over the upper chest and shoulder.'},
+        {n:'Platysma', t:'Muscle', d:'Thin superficial neck muscle.'}]},
+      {depth:'Middle', items:[
+        {n:'Omohyoid (inferior belly)', t:'Muscle', d:'Strap muscle crossing the lower triangle.'},
+        {n:'Transverse cervical vessels', t:'Vessels', d:'Cross the region toward the trapezius.'}]},
+      {depth:'Deep', items:[
+        {n:'Brachial plexus (trunks)', t:'Nerve', d:'The nerve bundle to the arm, passing between the scalene muscles toward the armpit.'},
+        {n:'Subclavian artery (3rd part)', t:'Artery', d:'Runs with the plexus over the first rib.'},
+        {n:'Scalene muscles', t:'Muscle', d:'The plexus and artery pass between anterior and middle scalene.'},
+        {n:'First rib', t:'Bone', d:'Floor of the region.'}]}],
+    clinical:'This is the thoracic outlet region. Pain here that radiates into the arm, or comes with numbness, tingling, or hand weakness, warrants specific evaluation of the brachial plexus and scalenes.'
+  },
+  trapezius_region:{
+    name:'Upper trapezius region',
+    bounds:'The sloping muscle mass behind the free border of the trapezius, running from the base of the skull and cervical spine out to the acromion and outer clavicle.',
+    layers:[
+      {depth:'Superficial', items:[
+        {n:'Skin and superficial fascia', t:'Soft tissue', d:'Covering layers.'}]},
+      {depth:'Middle', items:[
+        {n:'Upper trapezius', t:'Muscle', d:'Large superficial muscle elevating and rotating the shoulder blade. The most common site of neck/shoulder tension.'},
+        {n:'Accessory nerve (CN XI)', t:'Nerve', d:'Runs on the deep surface of the trapezius, supplying it.'}]},
+      {depth:'Deep', items:[
+        {n:'Levator scapulae', t:'Muscle', d:'Deep to trapezius; attaches to the superior angle of the scapula.'},
+        {n:'Rhomboid minor', t:'Muscle', d:'Deep muscle retracting the shoulder blade.'},
+        {n:'Supraspinatus', t:'Muscle', d:'Rotator cuff muscle in the fossa above the scapular spine.'}]}],
+    clinical:'The classic site of tension-type neck and shoulder pain. Upper trapezius trigger points characteristically refer pain up the side of the neck to behind the ear and the temple.'
+  },
+  posterior_midline:{
+    name:'Posterior midline / cervical spine',
+    bounds:'The line of spinous processes running from the base of the skull to the prominent C7 bump, plus the muscles immediately alongside.',
+    layers:[
+      {depth:'Superficial', items:[
+        {n:'Trapezius (medial fibres)', t:'Muscle', d:'Attaches along the midline ligament.'},
+        {n:'Ligamentum nuchae', t:'Ligament', d:'Strong midline ligament from skull to C7.'}]},
+      {depth:'Middle', items:[
+        {n:'Splenius capitis and cervicis', t:'Muscle', d:'Deep extensor muscles of the neck.'},
+        {n:'Semispinalis capitis', t:'Muscle', d:'Major deep extensor; a frequent source of headache at the back of the head.'}]},
+      {depth:'Deep', items:[
+        {n:'Cervical vertebrae C1-C7', t:'Bone', d:'The neck vertebrae themselves.'},
+        {n:'Cervical facet joints', t:'Joint', d:'Small paired joints guiding neck motion; a well-recognised source of one-sided neck pain.'},
+        {n:'Suboccipital muscles', t:'Muscle', d:'Small deep muscles at the skull base, closely linked to headaches.'},
+        {n:'Greater occipital nerve', t:'Nerve', d:'Emerges near the skull base to supply the back of the scalp.'}]}],
+    clinical:'Midline and paraspinal tenderness raises the question of facet joint irritation or deep extensor muscle strain, particularly when pain worsens with turning or looking up.'
+  },
+  anterior_triangle:{
+    name:'Anterior cervical triangle',
+    bounds:'In front of the SCM, bounded by the jawline above and the midline of the throat in front.',
+    layers:[
+      {depth:'Superficial', items:[
+        {n:'Platysma', t:'Muscle', d:'Superficial sheet of neck muscle.'},
+        {n:'Anterior jugular vein', t:'Vein', d:'Runs near the midline.'}]},
+      {depth:'Middle', items:[
+        {n:'Infrahyoid ("strap") muscles', t:'Muscle', d:'Sternohyoid, sternothyroid, omohyoid — move the larynx during swallowing.'},
+        {n:'Submandibular gland', t:'Gland', d:'Salivary gland beneath the jaw.'}]},
+      {depth:'Deep', items:[
+        {n:'Carotid sheath', t:'Vessel bundle', d:'Carotid artery, internal jugular vein, vagus nerve.'},
+        {n:'Thyroid gland', t:'Gland', d:'Sits over the trachea below the larynx.'},
+        {n:'Cervical lymph nodes', t:'Lymphatic', d:'Deep cervical chain.'}]}],
+    clinical:'Tenderness in the anterior triangle is less often muscular. Persistent tenderness, a lump, or swelling here should be examined promptly rather than assumed to be muscle strain.'
+  }
+};
+/* pain-character interpretation ---------------------------------- */
+const CHARACTER = {
+  'Sharp':      {implies:'nerve irritation or an active trigger point', weight:'nerve'},
+  'Burning':    {implies:'nerve involvement or sustained muscular ischaemia', weight:'nerve'},
+  'Throbbing':  {implies:'vascular or inflammatory contribution', weight:'vascular'},
+  'Tension':    {implies:'sustained muscular contraction', weight:'muscle'},
+  'Dull':       {implies:'muscular strain or deep joint origin', weight:'muscle'}
+};
+
+
+/* ===== likelihood.js ===== */
+/* =========================================================
+   LIKELIHOOD ENGINE
+   Scores each structure against the marked points using:
+     1. LOCATION  - is the structure in that point's region?
+     2. DEPTH     - superficial structures fit touch-triggered pain
+     3. CHARACTER - sharp/burning favours nerve; tension/dull favours muscle
+     4. TRIGGER   - movement favours joints/muscle; touch favours superficial
+   ========================================================= */
+const DEPTH_W = {'Superficial':1.0,'Middle':0.85,'Deep':0.65,'Deep (floor)':0.65};
+
+/* which structure types respond to which pain characters */
+const TYPE_AFFINITY = {
+  'Sharp':      {Nerve:1.0, Joint:0.8, Muscle:0.55, Bone:0.5, Ligament:0.6},
+  'Burning':    {Nerve:1.0, Muscle:0.6, Joint:0.5, Bone:0.35, Ligament:0.4},
+  'Throbbing':  {Artery:1.0, Vein:0.9, 'Vessel bundle':0.9, Muscle:0.6, Nerve:0.5},
+  'Tension':    {Muscle:1.0, Ligament:0.8, Fascia:0.8, Joint:0.5, Nerve:0.35},
+  'Dull':       {Muscle:0.95, Joint:0.85, Ligament:0.7, Bone:0.6, Nerve:0.4}
+};
+const TRIGGER_AFFINITY = {
+  'When touched': {sup:1.0, mid:0.8, deep:0.5},
+  'When moving':  {sup:0.6, mid:0.9, deep:1.0},
+  'During stress':{sup:0.8, mid:1.0, deep:0.7},
+  'Random times': {sup:0.8, mid:0.85, deep:0.85},
+  'In cold':      {sup:0.9, mid:0.9, deep:0.7}
+};
+function depthBucket(d){ return d==='Superficial'?'sup':(d.indexOf('Deep')===0?'deep':'mid'); }
+
+function typeScore(character, t){
+  const map=TYPE_AFFINITY[character]; if(!map) return 0.6;
+  if(map[t]!==undefined) return map[t];
+  // partial matches for compound labels e.g. "Vessel bundle", "Soft tissue"
+  for(const k in map){ if(t.indexOf(k)>=0) return map[k]; }
+  return 0.5;
+}
+
+/* generic covering layers carry no diagnostic weight as candidates */
+const NON_CANDIDATE=['Skin and superficial fascia','Platysma / investing fascia'];
+
+function scoreStructures(zones){
+  const acc={};   // name -> {name,type,score,zones:[],regions:Set,depths:Set}
+  zones.forEach(z=>{
+    const rg=REGIONS[z.region]; if(!rg) return;
+    const confW = z.conf==='high'?1.0:0.75;
+    rg.layers.forEach(layer=>{
+      const dW=DEPTH_W[layer.depth]!==undefined?DEPTH_W[layer.depth]:0.75;
+      const tb=depthBucket(layer.depth);
+      const trigMap=TRIGGER_AFFINITY[z.mark.trigger]||{sup:0.8,mid:0.8,deep:0.8};
+      const trW=trigMap[tb];
+      layer.items.forEach(it=>{
+        if(NON_CANDIDATE.indexOf(it.n)>=0) return;
+        const chW=typeScore(z.mark.type,it.t);
+        const sevW=0.7+0.3*(Number(z.mark.sev)/10);
+        const s=dW*trW*chW*confW*sevW;
+        if(!acc[it.n]) acc[it.n]={name:it.n,type:it.t,desc:it.d,score:0,zones:[],regions:{},depths:{}};
+        acc[it.n].score+=s;
+        acc[it.n].zones.push(z.id);
+        acc[it.n].regions[z.region]=true;
+        acc[it.n].depths[layer.depth]=true;
+      });
+    });
+  });
+  const list=Object.values(acc);
+  if(!list.length) return [];
+  const max=Math.max(...list.map(x=>x.score));
+  list.forEach(x=>{
+    x.norm=x.score/max;
+    x.coverage=new Set(x.zones).size/zones.length;
+    x.rating = x.norm>=0.80 ? 'VERY HIGH'
+             : x.norm>=0.60 ? 'HIGH'
+             : x.norm>=0.38 ? 'MODERATE'
+             : 'LOW';
+    x.zoneList=Array.from(new Set(x.zones));
+    x.depthList=Object.keys(x.depths);
+  });
+  return list.sort((a,b)=>b.score-a.score);
+}
+
+/* plain-language justification for a rating */
+function rationale(x, zones){
+  const bits=[];
+  if(x.coverage>=0.99) bits.push('lies beneath every marked point');
+  else if(x.coverage>0.5) bits.push('lies beneath most marked points ('+x.zoneList.join(', ')+')');
+  else bits.push('lies beneath '+x.zoneList.join(', '));
+  const chars=Array.from(new Set(zones.filter(z=>x.zoneList.indexOf(z.id)>=0).map(z=>z.mark.type)));
+  const t=x.type.toLowerCase();
+  if(chars.some(c=>c==='Sharp'||c==='Burning') && /nerve/.test(t))
+    bits.push('the sharp/burning character reported fits nerve involvement');
+  else if(chars.some(c=>c==='Tension'||c==='Dull') && /muscle/.test(t))
+    bits.push('the dull/tension character reported fits muscular origin');
+  else if(chars.some(c=>c==='Dull') && /joint/.test(t))
+    bits.push('dull pain is consistent with a joint source');
+  if(x.depthList.indexOf('Superficial')>=0 &&
+     zones.some(z=>x.zoneList.indexOf(z.id)>=0 && z.mark.trigger==='When touched'))
+    bits.push('its superficial position fits pain provoked by touch');
+  if(x.depthList.every(d=>d.indexOf('Deep')===0) &&
+     zones.some(z=>x.zoneList.indexOf(z.id)>=0 && z.mark.trigger==='When moving'))
+    bits.push('its deep position fits pain provoked by movement');
+  return bits.join('; ')+'.';
+}
+
+
+/* ===== render4.js ===== */
+const LAYOUT4={ marginFrac:0.235, headerFrac:0.075, footerFrac:0.075 };
+function metrics4(cw,ch){
+  const ml=cw*LAYOUT4.marginFrac, mr=ml;
+  const hh=ch*LAYOUT4.headerFrac, fh=ch*LAYOUT4.footerFrac;
+  return {ml,mr,hh,fh,px:ml,py:hh,pw:cw-ml-mr,ph:ch-hh-fh};
+}
+const REGION_COLOR={
+  scm_belly:'#e8743b', occipital_triangle:'#d94f6a', supraclavicular:'#f0a91e',
+  trapezius_region:'#d9463d', posterior_midline:'#7b6ce0', anterior_triangle:'#2fa8a0'
+};
+function px(m,p){ return [m.px+p[0]*m.pw, m.py+p[1]*m.ph]; }
+
+/* shade a region by testing a grid of points through the classifier */
+/* Regions are only meaningful near the landmark scaffold. Outside that
+   neighbourhood the classifier is extrapolating, so we don't paint it. */
+function inNeighbourhood(p,L,B){
+  const ref=B.ref;
+  const d=Math.min(
+    distToSeg(p,B.scm[0],B.scm[1]),
+    distToSeg(p,B.trapEdge[0],B.trapEdge[1]),
+    distToSeg(p,B.spine[0],B.spine[1]),
+    B.clavicle?distToSeg(p,B.clavicle[0],B.clavicle[1]):99
+  );
+  return (d/ref) < 0.42;
+}
+function shadeRegion(ctx,m,L,regionKey,color,alpha){
+  const step=0.010;
+  const B=buildBoundaries(L);
+  ctx.save(); ctx.globalAlpha=alpha; ctx.fillStyle=color;
+  for(let x=0;x<1;x+=step){
+    for(let y=0;y<1;y+=step){
+      const p=[x,y];
+      if(!inNeighbourhood(p,L,B)) continue;
+      if(classify(p,L).region===regionKey){
+        const q=px(m,p);
+        ctx.fillRect(q[0],q[1], m.pw*step+1, m.ph*step+1);
+      }
+    }
+  }
+  ctx.restore();
+}
+function line(ctx,m,a,b,color,w,dash){
+  const A=px(m,a), B=px(m,b);
+  ctx.save();
+  if(dash) ctx.setLineDash(dash);
+  ctx.strokeStyle=color; ctx.lineWidth=w; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(A[0],A[1]); ctx.lineTo(B[0],B[1]); ctx.stroke();
+  ctx.restore();
+}
+function drawPlate4(ctx, photo, cw, ch, opts){
+  opts=opts||{};
+  const m=metrics4(cw,ch);
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,cw,ch);
+
+  ctx.save();
+  ctx.beginPath(); ctx.rect(m.px,m.py,m.pw,m.ph); ctx.clip();
+  ctx.drawImage(photo.img,m.px,m.py,m.pw,m.ph);
+  ctx.fillStyle='rgba(12,20,32,0.52)'; ctx.fillRect(m.px,m.py,m.pw,m.ph);
+  ctx.restore();
+  ctx.strokeStyle='#24344a'; ctx.lineWidth=1.4;
+  ctx.strokeRect(m.px,m.py,m.pw,m.ph);
+
+  const done = photo.lmDone.length>=LANDMARKS.filter(l=>l.req).length;
+  const haveAll = LANDMARKS.filter(l=>l.req).every(l=>photo.lm[l.key]);
+
+  if(!haveAll){
+    ctx.save(); ctx.beginPath(); ctx.rect(m.px,m.py,m.pw,m.ph); ctx.clip();
+    photo.lmDone.forEach((k,i)=>{
+      const c=photo.lm[k]; if(!c) return;
+      const q=px(m,c);
+      ctx.beginPath(); ctx.arc(q[0],q[1],8,0,7);
+      ctx.fillStyle='#31d67a'; ctx.fill();
+      ctx.strokeStyle='#08301c'; ctx.lineWidth=2; ctx.stroke();
+      ctx.fillStyle='#fff'; ctx.font='bold 13px Georgia';
+      ctx.fillText(String(i+1),q[0]+10,q[1]-9);
+    });
+    ctx.restore();
+    header4(ctx,cw,m,photo,true);
+    return {m};
+  }
+
+  const L=photo.lm;
+  const B=buildBoundaries(L);
+
+  /* shade regions occupied by marked points (or all, if previewing) */
+  ctx.save(); ctx.beginPath(); ctx.rect(m.px,m.py,m.pw,m.ph); ctx.clip();
+  const active = opts.showAll
+    ? Object.keys(REGIONS)
+    : Array.from(new Set((photo.marks||[]).map(mk=>classify([mk.x,mk.y],L).region)));
+  active.forEach(rk=> shadeRegion(ctx,m,L,rk,REGION_COLOR[rk]||'#888', opts.showAll?0.22:0.34));
+
+  /* real boundary lines — each connects two tapped landmarks */
+  line(ctx,m,B.scm[0],B.scm[1],'#ffb37a',Math.max(2,m.pw*0.007));
+  line(ctx,m,B.trapEdge[0],B.trapEdge[1],'#ff8f88',Math.max(2,m.pw*0.007));
+  if(B.clavicle) line(ctx,m,B.clavicle[0],B.clavicle[1],'#9fe0ff',Math.max(2,m.pw*0.007));
+  line(ctx,m,B.spine[0],B.spine[1],'#b7aef5',Math.max(1.6,m.pw*0.005),[6,5]);
+
+  /* landmark dots */
+  LANDMARKS.forEach(l=>{
+    const c=L[l.key]; if(!c) return;
+    const q=px(m,c);
+    ctx.beginPath(); ctx.arc(q[0],q[1],Math.max(3.5,m.pw*0.009),0,7);
+    ctx.fillStyle='#eaf6ff'; ctx.fill();
+    ctx.strokeStyle='#24344a'; ctx.lineWidth=1.3; ctx.stroke();
+  });
+
+  /* tender marks */
+  (photo.marks||[]).forEach((mk,i)=>{
+    const q=px(m,[mk.x,mk.y]);
+    const r=Math.max(10,m.pw*0.028);
+    ctx.beginPath(); ctx.arc(q[0],q[1],r,0,7);
+    ctx.strokeStyle='#fff'; ctx.lineWidth=Math.max(3,m.pw*0.008); ctx.stroke();
+    ctx.beginPath(); ctx.arc(q[0],q[1],r,0,7);
+    ctx.strokeStyle='#ff2f6d'; ctx.lineWidth=Math.max(1.6,m.pw*0.004); ctx.stroke();
+    ctx.beginPath(); ctx.arc(q[0],q[1],r*0.2,0,7); ctx.fillStyle='#ff2f6d'; ctx.fill();
+    const fs=Math.max(11,m.pw*0.028);
+    ctx.font='bold '+fs+'px Georgia';
+    const tag='T'+(i+1), tw=ctx.measureText(tag).width;
+    ctx.fillStyle='rgba(255,255,255,.95)';
+    ctx.fillRect(q[0]+r+3,q[1]-fs*0.95,tw+8,fs+5);
+    ctx.strokeStyle='#ff2f6d'; ctx.lineWidth=1.1;
+    ctx.strokeRect(q[0]+r+3,q[1]-fs*0.95,tw+8,fs+5);
+    ctx.fillStyle='#c11d4f'; ctx.fillText(tag,q[0]+r+7,q[1]+fs*0.25);
+  });
+  ctx.restore();
+
+  labels4(ctx,photo,m,cw,active,L);
+  header4(ctx,cw,m,photo,false);
+  footer4(ctx,cw,ch,m,active);
+  return {m};
+}
+function header4(ctx,cw,m,photo,calib){
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,cw,m.hh);
+  const fs=Math.max(12,cw*0.019);
+  ctx.textAlign='center';
+  ctx.font='bold '+fs+'px Georgia'; ctx.fillStyle='#16283a';
+  ctx.fillText('SURFACE ANATOMY MAP — '+(photo.side==='left'?'LEFT':'RIGHT')+' NECK & SHOULDER',cw/2,m.hh*0.5);
+  ctx.font='italic '+(fs*0.6)+'px Georgia'; ctx.fillStyle='#6c7c8c';
+  ctx.fillText(calib?'Landmark identification in progress'
+    :'Regions derived from palpable landmarks — educational reference, not medical imaging',cw/2,m.hh*0.82);
+  ctx.textAlign='left';
+}
+function footer4(ctx,cw,ch,m,active){
+  const y=ch-m.fh;
+  ctx.fillStyle='#fff'; ctx.fillRect(0,y,cw,m.fh);
+  ctx.strokeStyle='#c9d4de'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(cw*0.05,y); ctx.lineTo(cw*0.95,y); ctx.stroke();
+  const fs=Math.max(8.5,cw*0.0125);
+  ctx.font=fs+'px Georgia';
+  const items=active.map(k=>[REGIONS[k].name.split('(')[0].trim(), REGION_COLOR[k]]);
+  items.push(['Tender point','#ff2f6d']);
+  let tw=0; items.forEach(i=>tw+=ctx.measureText(i[0]).width+30);
+  let x=Math.max(6,(cw-tw)/2);
+  items.forEach(i=>{
+    ctx.fillStyle=i[1]; ctx.fillRect(x,y+m.fh*0.40,fs*0.9,fs*0.9);
+    ctx.strokeStyle='#8fa0ae'; ctx.lineWidth=0.7; ctx.strokeRect(x,y+m.fh*0.40,fs*0.9,fs*0.9);
+    ctx.fillStyle='#3d4d5c'; ctx.fillText(i[0],x+fs*1.4,y+m.fh*0.40+fs*0.85);
+    x+=ctx.measureText(i[0]).width+30;
+  });
+}
+function labels4(ctx,photo,m,cw,active,L){
+  const pad=8, maxW=m.ml-pad*2;
+  const fs=Math.max(8.5,Math.min(cw*0.0125,maxW*0.15));
+  const ents=[];
+  /* label the boundary lines (real structures) */
+  const B=buildBoundaries(L);
+  const mid=(a,b)=>[(a[0]+b[0])/2,(a[1]+b[1])/2];
+  ents.push({txt:'STERNOCLEIDOMASTOID',sub:'muscle border',at:mid(B.scm[0],B.scm[1]),col:'#ffb37a'});
+  ents.push({txt:'TRAPEZIUS',sub:'free border',at:mid(B.trapEdge[0],B.trapEdge[1]),col:'#ff8f88'});
+  if(B.clavicle) ents.push({txt:'CLAVICLE',sub:'bone',at:mid(B.clavicle[0],B.clavicle[1]),col:'#9fe0ff'});
+  ents.push({txt:'CERVICAL SPINE',sub:'spinous line',at:mid(B.spine[0],B.spine[1]),col:'#b7aef5'});
+
+  ents.forEach(e=>{ e.p=px(m,e.at); e.side = e.p[0] < m.px+m.pw*0.5 ? 'L':'R'; });
+  ['L','R'].forEach(sd=>{
+    const list=ents.filter(e=>e.side===sd).sort((a,b)=>a.p[1]-b.p[1]);
+    if(!list.length) return;
+    const lh=fs*2.8, tot=list.length*lh;
+    const st=m.py+Math.max(0,(m.ph-tot)/2);
+    list.forEach((e,i)=>{ e.ly=st+i*lh+lh*0.45; });
+    list.forEach(e=>{
+      const tx = sd==='L' ? m.ml-pad : cw-m.mr+pad;
+      ctx.textAlign = sd==='L'?'right':'left';
+      ctx.strokeStyle='#5a6b7a'; ctx.lineWidth=0.9;
+      ctx.beginPath(); ctx.moveTo(e.p[0],e.p[1]);
+      const ex = sd==='L'? m.px+6 : m.px+m.pw-6;
+      ctx.lineTo(ex,e.p[1]); ctx.lineTo(tx,e.ly); ctx.stroke();
+      ctx.beginPath(); ctx.arc(e.p[0],e.p[1],3.2,0,7);
+      ctx.fillStyle=e.col; ctx.fill(); ctx.strokeStyle='#fff'; ctx.lineWidth=1.1; ctx.stroke();
+      ctx.font='bold '+fs+'px Georgia'; ctx.fillStyle='#16283a';
+      let t=e.txt; while(ctx.measureText(t).width>maxW && t.length>4) t=t.slice(0,-1);
+      ctx.fillText(t,tx,e.ly);
+      ctx.font='italic '+(fs*0.8)+'px Georgia'; ctx.fillStyle='#7b8b9a';
+      ctx.fillText(e.sub,tx,e.ly+fs*1.1);
+    });
+  });
+  ctx.textAlign='left';
+}
+
+
+/* ===== report4.js ===== */
+function analyse(){
+  const zones=[]; const regionCount={};
+  photos.forEach((p,pi)=>{
+    if(!LANDMARKS.filter(l=>l.req).every(l=>p.lm[l.key])) return;
+    (p.marks||[]).forEach((mk,mi)=>{
+      const c=classify([mk.x,mk.y],p.lm);
+      zones.push({id:'T'+(mi+1),photo:pi+1,side:p.side,mark:mk,region:c.region,conf:c.confidence});
+      regionCount[c.region]=(regionCount[c.region]||0)+1;
+    });
+  });
+  return {zones,regionCount};
+}
+function generateReport(){
+  const msg=document.getElementById('msg');
+  msg.innerHTML='<div class="info">⏳ Building report…</div>';
+  try{
+    const {jsPDF}=window.jspdf;
+    const doc=new jsPDF({unit:'mm',format:'a4'});
+    const PW=doc.internal.pageSize.getWidth(), PH=doc.internal.pageSize.getHeight();
+    const L=14,R=PW-14,CW=R-L; let y=0;
+    const {zones,regionCount}=analyse();
+    const nf=()=>{doc.addPage();y=18;};
+    const need=h=>{if(y+h>PH-16)nf();};
+    const H1=t=>{need(14);doc.setFont('times','bold');doc.setFontSize(15);doc.setTextColor(22,40,58);
+      doc.text(t,L,y);y+=2;doc.setDrawColor(22,40,58);doc.setLineWidth(0.6);doc.line(L,y,R,y);y+=6;doc.setTextColor(0);};
+    const H2=t=>{need(10);doc.setFont('times','bold');doc.setFontSize(11);doc.setTextColor(30,55,75);doc.text(t,L,y);y+=5;doc.setTextColor(0);};
+    const P=(t,sz,col,ind)=>{doc.setFont('times','normal');doc.setFontSize(sz||9.5);
+      doc.setTextColor(col?col[0]:35,col?col[1]:35,col?col[2]:40);
+      const ln=doc.splitTextToSize(t,CW-(ind||0));need(ln.length*4.5+2);doc.text(ln,L+(ind||0),y);y+=ln.length*4.5+2;doc.setTextColor(0);};
+
+    /* COVER */
+    y=44;doc.setFont('times','bold');doc.setFontSize(23);doc.setTextColor(22,40,58);
+    doc.text('Neck & Shoulder',PW/2,y,{align:'center'});y+=11;
+    doc.text('Surface Anatomy Report',PW/2,y,{align:'center'});y+=13;
+    doc.setFont('times','italic');doc.setFontSize(11);doc.setTextColor(110);
+    doc.text('Regions derived from palpable anatomical landmarks',PW/2,y,{align:'center'});y+=13;
+    doc.setDrawColor(22,40,58);doc.setLineWidth(0.7);doc.line(L+28,y,R-28,y);y+=11;
+    doc.setTextColor(38);
+    P('Each tender point marked on the photograph is located within a defined region of surface anatomy. '+
+      'Those regions are bounded by structures that can be felt directly through the skin — the border of the '+
+      'sternocleidomastoid, the free border of the trapezius, the collarbone, and the line of the spinous processes. '+
+      'For every marked point this report lists the structures that lie beneath it, from the skin downward.');
+    y+=4;
+    P('Date: '+new Date().toLocaleDateString()+'     Photographs: '+photos.length+'     Tender points: '+zones.length,9.5,[90,90,90]);
+    doc.setFontSize(8);doc.setTextColor(130);
+    doc.text('Educational reference. Not a diagnosis and not medical imaging.',PW/2,PH-20,{align:'center'});
+
+    /* PLATES */
+    photos.forEach((p,pi)=>{
+      if(!LANDMARKS.filter(l=>l.req).every(l=>p.lm[l.key])) return;
+      doc.addPage();y=16;
+      doc.setFont('times','bold');doc.setFontSize(13);doc.setTextColor(22,40,58);
+      doc.text('Plate '+(pi+1)+' — '+(p.side==='left'?'Left':'Right')+' Neck & Shoulder',L,y);y+=6;doc.setTextColor(0);
+      const c=document.createElement('canvas');
+      const Wt=1400,inner=1-LAYOUT4.headerFrac-LAYOUT4.footerFrac;
+      const pw=Wt*(1-2*LAYOUT4.marginFrac);
+      c.width=Wt;c.height=Math.round((pw*(p.img.height/p.img.width))/inner);
+      drawPlate4(c.getContext('2d'),p,c.width,c.height,{});
+      const im=c.toDataURL('image/jpeg',0.92);
+      let w=CW,h=w*(c.height/c.width);
+      const mx=PH-y-52; if(h>mx){h=mx;w=h*(c.width/c.height);}
+      doc.addImage(im,'JPEG',L+(CW-w)/2,y,w,h);y+=h+5;
+      const zs=zones.filter(z=>z.photo===pi+1);
+      if(zs.length){
+        H2('Points on this plate');
+        zs.forEach(z=>{need(6);
+          doc.setFont('times','bold');doc.setFontSize(9.3);doc.setTextColor(150,20,60);doc.text(z.id,L,y);
+          doc.setFont('times','normal');doc.setTextColor(35);
+          const ln=doc.splitTextToSize(REGIONS[z.region].name+' — '+z.mark.type.toLowerCase()+
+            ' pain, '+z.mark.trigger.toLowerCase()+', '+z.mark.sev+'/10',CW-10);
+          doc.text(ln,L+9,y);y+=ln.length*4.4+1.4;});
+        doc.setTextColor(0);
+      }
+    });
+
+    /* PER-POINT DETAIL */
+    nf();H1('Findings by Tender Point');
+    if(!zones.length) P('No tender points were marked.');
+    zones.forEach(z=>{
+      const rg=REGIONS[z.region];
+      need(30);
+      doc.setFont('times','bold');doc.setFontSize(12);doc.setTextColor(150,20,60);
+      doc.text(z.id+' — '+rg.name,L,y);y+=5.5;
+      doc.setFont('times','normal');doc.setFontSize(9.3);doc.setTextColor(120);
+      doc.text('Localisation confidence: '+z.conf+(z.conf==='moderate'?'  (point lies near a regional boundary)':''),L,y);y+=5;
+      doc.setTextColor(35);
+      P('Boundaries: '+rg.bounds,9.2,[60,60,68]);
+      P('Reported as '+z.mark.type.toLowerCase()+' pain, '+z.mark.trigger.toLowerCase()+
+        ', severity '+z.mark.sev+'/10. This character of pain typically suggests '+
+        (CHARACTER[z.mark.type]?CHARACTER[z.mark.type].implies:'a non-specific origin')+'.',9.2);
+      H2('Structures beneath this point, superficial to deep');
+      rg.layers.forEach(ly=>{
+        need(8);
+        doc.setFont('times','bold');doc.setFontSize(9);doc.setTextColor(30,80,110);
+        doc.text(ly.depth.toUpperCase(),L+3,y);y+=4.3;
+        doc.setTextColor(35);
+        ly.items.forEach(it=>{
+          need(5);
+          doc.setFont('times','bold');doc.setFontSize(8.9);
+          doc.text('• '+it.n,L+7,y);
+          const wN=doc.getTextWidth('• '+it.n);
+          doc.setFont('times','normal');doc.setTextColor(115);
+          doc.text(' ('+it.t+')',L+7+wN,y);y+=4;
+          doc.setTextColor(55);doc.setFontSize(8.6);
+          const ln=doc.splitTextToSize(it.d,CW-16);
+          doc.text(ln,L+11,y);y+=ln.length*3.9+1.2;
+          doc.setTextColor(35);
+        });
+        y+=1;
+      });
+      need(12);
+      doc.setFont('times','italic');doc.setFontSize(9);doc.setTextColor(95,60,140);
+      const cl=doc.splitTextToSize('Clinical note: '+rg.clinical,CW-4);
+      doc.text(cl,L+2,y);y+=cl.length*4.3+3;
+      doc.setTextColor(0);
+      doc.setDrawColor(225);doc.line(L,y,R,y);y+=6;
+    });
+
+    /* LIKELIHOOD RANKING */
+    if(zones.length){
+      nf();H1('Most Likely Structures Involved');
+      P('Each structure below is scored on four things: whether it lies beneath the marked points, how deep it sits, '+
+        'whether the reported character of pain fits that kind of tissue, and what provokes the pain. Ratings are relative '+
+        'to each other within this report — they rank candidates for discussion, they do not diagnose.',9.2,[60,60,68]);
+      y+=2;
+      const cands=scoreStructures(zones);
+      const RCOL={'VERY HIGH':[176,26,48],'HIGH':[196,110,20],'MODERATE':[60,110,120],'LOW':[140,148,156]};
+      /* table header */
+      need(10);
+      doc.setFillColor(22,40,58);doc.rect(L,y-4.4,CW,7,'F');
+      doc.setFont('times','bold');doc.setFontSize(8.6);doc.setTextColor(255);
+      doc.text('Structure',L+2,y);doc.text('Type',L+62,y);
+      doc.text('Points',L+90,y);doc.text('Depth',L+112,y);doc.text('Likelihood',R-24,y);
+      y+=7;doc.setTextColor(0);
+      let alt=false;
+      cands.slice(0,12).forEach(c=>{
+        need(6.4);
+        if(alt){doc.setFillColor(246,248,250);doc.rect(L,y-4.2,CW,5.8,'F');}
+        alt=!alt;
+        doc.setFont('times','normal');doc.setFontSize(8.4);doc.setTextColor(25);
+        doc.text(doc.splitTextToSize(c.name,58)[0],L+2,y);
+        doc.setTextColor(110);
+        doc.text(c.type,L+62,y);
+        doc.text(c.zoneList.join(','),L+90,y);
+        doc.text(c.depthList.map(d=>d.replace(' (floor)','')).join('/').slice(0,14),L+112,y);
+        const rc=RCOL[c.rating];
+        doc.setFont('times','bold');doc.setTextColor(rc[0],rc[1],rc[2]);
+        doc.text(c.rating,R-24,y);
+        y+=5.8;doc.setTextColor(0);
+      });
+      y+=4;
+      H2('Why the leading candidates rank where they do');
+      cands.slice(0,4).forEach(c=>{
+        need(12);
+        doc.setFont('times','bold');doc.setFontSize(9.3);doc.setTextColor(22,40,58);
+        doc.text(c.name+' — '+c.rating,L+2,y);y+=4.4;
+        doc.setFont('times','normal');doc.setTextColor(50);
+        const rl=doc.splitTextToSize(rationale(c,zones).charAt(0).toUpperCase()+rationale(c,zones).slice(1),CW-8);
+        doc.text(rl,L+5,y);y+=rl.length*4.3+1;
+        doc.setTextColor(90);doc.setFontSize(8.5);
+        const dl=doc.splitTextToSize(c.desc,CW-8);
+        doc.text(dl,L+5,y);y+=dl.length*3.9+3.5;
+        doc.setTextColor(0);
+      });
+    }
+
+    /* SUMMARY */
+    need(50);H1('Summary');
+    const rk=Object.entries(regionCount).sort((a,b)=>b[1]-a[1]);
+    if(rk.length){
+      H2('Distribution');
+      P('The '+zones.length+' marked point(s) fall into '+rk.length+' anatomical region(s): '+
+        rk.map(r=>REGIONS[r[0]].name+' ('+r[1]+')').join('; ')+'.');
+      const nerveish=zones.filter(z=>CHARACTER[z.mark.type]&&CHARACTER[z.mark.type].weight==='nerve');
+      if(nerveish.length){
+        H2('Pain character');
+        P(nerveish.length+' of '+zones.length+' point(s) — '+nerveish.map(z=>z.id).join(', ')+
+          ' — were described as sharp or burning. That description points more toward nerve irritation or an '+
+          'active trigger point than toward simple muscle fatigue, and is worth stating explicitly at the appointment.');
+      }
+      const sev=zones.filter(z=>Number(z.mark.sev)>=7);
+      if(sev.length){H2('Higher severity');
+        P('Rated 7/10 or above: '+sev.map(z=>z.id+' ('+z.mark.sev+'/10)').join(', ')+'.');}
+      if(regionCount.supraclavicular){
+        H2('Region-specific flag');
+        P('One or more points fall in the supraclavicular fossa, the thoracic outlet region. If pain there radiates '+
+          'into the arm or comes with numbness, tingling, or hand weakness, ask specifically about the brachial plexus '+
+          'and scalene muscles.');}
+      if(regionCount.anterior_triangle){
+        H2('Region-specific flag');
+        P('One or more points fall in the anterior triangle, where tenderness is less often muscular. Persistent '+
+          'tenderness, a lump, or swelling in this area should be examined promptly rather than assumed to be strain.');}
+    } else P('No marked points to summarise.');
+
+    /* PROVIDER */
+    need(45);H1('For the Appointment');
+    H2('Describing each point');
+    zones.forEach(z=>{need(8);
+      P('"'+z.id+' — on my '+z.side+' side I get '+z.mark.type.toLowerCase()+' pain, '+
+        z.mark.trigger.toLowerCase()+', about '+z.mark.sev+' out of 10. It sits in the '+
+        REGIONS[z.region].name.toLowerCase()+'."',9.3,[35,35,40],3);});
+    H2('Questions worth asking');
+    ['Does the location and pain pattern fit muscular strain, a trigger point, or nerve irritation?',
+     'Should the cervical facet joints be assessed, particularly with movement?',
+     'Is there any indication for imaging at this stage, or is a physical examination sufficient?',
+     'Would physical therapy, postural assessment, or ergonomic changes be appropriate first steps?',
+     'Are there any features here that would warrant more urgent evaluation?'
+    ].forEach(q=>{need(6);P('• '+q,9.3,[35,35,40],3);});
+
+    /* METHOD + LIMITS */
+    nf();H1('Method and Limitations');
+    P('Each photograph was calibrated by identifying palpable landmarks directly on the image: the mastoid process, '+
+      'the base of the skull, the C7 spinous process, the acromion, and where visible the sternal notch. The lines drawn '+
+      'on each plate connect two identified landmarks and correspond to real surface structures — the course of the '+
+      'sternocleidomastoid, the free border of the trapezius, the clavicle, and the line of the cervical spinous processes. '+
+      'These boundaries define standard regions of surface anatomy, and the structures listed for each region are those '+
+      'documented to lie within it.');
+    H2('What this cannot do');
+    P('This report does not visualise this individual\u2019s actual internal anatomy. It shows where standard anatomical '+
+      'regions fall relative to landmarks identified on a photograph. Individual anatomy varies, landmark identification on '+
+      'a photograph is approximate, and a two-dimensional image cannot convey depth. Points marked near a regional boundary '+
+      'are flagged as moderate confidence for that reason.');
+    H2('What it is for');
+    P('The purpose is to help describe symptoms precisely and ask better-informed questions. It is not a diagnosis, and it '+
+      'does not replace clinical examination. Any decision about cause or treatment belongs with a qualified healthcare provider.');
+    y+=4;doc.setDrawColor(205);doc.line(L,y,R,y);y+=5;
+    doc.setFont('times','italic');doc.setFontSize(8);doc.setTextColor(120);
+    doc.text(doc.splitTextToSize('Educational reference generated from photographs and self-reported tender areas. '+
+      'Not a diagnosis; not medical imaging. Seek evaluation from a qualified healthcare provider.',CW),L,y);
+
+    doc.save('Surface_Anatomy_Report.pdf');
+    msg.innerHTML='<div class="info success">✅ Report generated — check Downloads / Files.</div>';
+  }catch(e){console.error(e);
+    msg.innerHTML='<div class="info errbox">❌ Error: '+e.message+'</div>';}
+}
+
+let photos=[],curIdx=0,pending=null;
+const REQ=LANDMARKS.filter(l=>l.req);
+document.getElementById('files').addEventListener('change',function(e){
+  const list=Array.from(e.target.files); if(!list.length)return;
+  photos=[];let done=0;
+  list.forEach(f=>{const r=new FileReader();
+    r.onload=ev=>{const img=new Image();
+      img.onload=()=>{photos.push({img,side:'left',lm:{},lmDone:[],marks:[]});done++;
+        if(done===list.length){showList();document.getElementById('toS2').disabled=false;}};
+      img.src=ev.target.result;};
+    r.readAsDataURL(f);});
+});
+function showList(){const el=document.getElementById('photoList');el.innerHTML='';
+  photos.forEach((_,i)=>{const d=document.createElement('div');d.className='photo-item';
+    d.innerHTML='Photograph '+(i+1)+' <button class="small gray" onclick="delPhoto('+i+')">Remove</button>';
+    el.appendChild(d);});}
+function delPhoto(i){photos.splice(i,1);showList();if(!photos.length)document.getElementById('toS2').disabled=true;}
+function startWork(){curIdx=0;goScreen(2);loadPhoto();}
+function goScreen(n){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('s'+n).classList.add('active');if(n===3)buildReview();}
+function sizeCanvas(){const cv=document.getElementById('canvas');
+  const w=cv.parentElement.clientWidth-2,img=photos[curIdx].img;
+  const inner=1-LAYOUT4.headerFrac-LAYOUT4.footerFrac;
+  const pw=w*(1-2*LAYOUT4.marginFrac);
+  cv.width=w;cv.height=Math.round((pw*(img.height/img.width))/inner);}
+function loadPhoto(){sizeCanvas();
+  document.getElementById('pcount').textContent='('+(curIdx+1)+' of '+photos.length+')';
+  document.getElementById('prevBtn').style.visibility=curIdx===0?'hidden':'visible';
+  document.getElementById('nextBtn').textContent=curIdx===photos.length-1?'Finish → Review':'Next →';
+  updateSide();redraw();updateInstr();}
+function setSide(s){photos[curIdx].side=s;updateSide();redraw();}
+function updateSide(){const p=photos[curIdx];
+  document.getElementById('sideL').className='small'+(p.side==='left'?' on':'');
+  document.getElementById('sideR').className='small'+(p.side==='right'?' on':'');}
+function nextLM(p){return LANDMARKS.find(l=>!(l.key in p.lm));}
+function updateInstr(){const p=photos[curIdx],el=document.getElementById('instr'),nx=nextLM(p);
+  if(nx){el.innerHTML='<b>Landmark '+(p.lmDone.length+1)+' of '+LANDMARKS.length+': '+nx.name+'</b><br>'+nx.help+
+    (nx.req?'':'<br><i style="color:#7b8b9a">Optional — skip if not visible</i>');
+    document.getElementById('skipRow').style.display=nx.req?'none':'flex';}
+  else{el.innerHTML='<b>Landmarks set.</b> Tap the photo to mark a tender point. Marked: '+p.marks.length;
+    document.getElementById('skipRow').style.display='none';}}
+function recalib(){const p=photos[curIdx];p.lm={};p.lmDone=[];p.marks=[];redraw();updateInstr();}
+function undoPt(){const p=photos[curIdx];
+  if(p.marks.length)p.marks.pop();
+  else if(p.lmDone.length){const k=p.lmDone.pop();delete p.lm[k];}
+  redraw();updateInstr();}
+function skipPt(){const p=photos[curIdx],nx=nextLM(p);
+  if(!nx||nx.req)return;p.lm[nx.key]=null;p.lmDone.push(nx.key);redraw();updateInstr();}
+function prevPhoto(){if(curIdx>0){curIdx--;loadPhoto();}}
+function nextPhoto(){const p=photos[curIdx];
+  if(!REQ.every(l=>p.lm[l.key])){alert('Please identify all required landmarks on this photograph first.');return;}
+  if(curIdx<photos.length-1){curIdx++;loadPhoto();}else goScreen(3);}
+document.getElementById('canvas').addEventListener('click',function(e){
+  const p=photos[curIdx],cv=document.getElementById('canvas');
+  const rc=cv.getBoundingClientRect();
+  const x=(e.clientX-rc.left)*(cv.width/rc.width), y=(e.clientY-rc.top)*(cv.height/rc.height);
+  const m=metrics4(cv.width,cv.height);
+  const fx=(x-m.px)/m.pw, fy=(y-m.py)/m.ph;
+  if(fx<0||fx>1||fy<0||fy>1)return;
+  const nx=nextLM(p);
+  if(nx){p.lm[nx.key]=[fx,fy];p.lmDone.push(nx.key);redraw();updateInstr();return;}
+  const c=classify([fx,fy],p.lm);
+  pending={x:fx,y:fy,region:c.region,conf:c.confidence};
+  document.getElementById('loc').textContent=REGIONS[c.region].name+
+    (c.confidence==='moderate'?' (near a boundary)':'');
+  document.getElementById('trigger').value='';document.getElementById('type').value='';
+  document.getElementById('sev').value=5;document.getElementById('num').textContent=5;
+  document.getElementById('modal').classList.add('active');});
+function closeModal(){document.getElementById('modal').classList.remove('active');}
+function saveMark(){const t=document.getElementById('trigger').value,
+  ty=document.getElementById('type').value,sv=document.getElementById('sev').value;
+  if(!t||!ty){alert('Please select both a trigger and a pain character.');return;}
+  photos[curIdx].marks.push({x:pending.x,y:pending.y,trigger:t,type:ty,sev:sv});
+  closeModal();redraw();updateInstr();}
+function toggleAll(){window.__showAll=!window.__showAll;
+  document.getElementById('tgAll').className='small'+(window.__showAll?' on':'');redraw();}
+function redraw(){const cv=document.getElementById('canvas');
+  drawPlate4(cv.getContext('2d'),photos[curIdx],cv.width,cv.height,{showAll:window.__showAll});}
+window.addEventListener('resize',()=>{if(photos.length&&document.getElementById('s2').classList.contains('active')){sizeCanvas();redraw();}});
+function buildReview(){let h='';
+  photos.forEach((p,i)=>{const ok=REQ.every(l=>p.lm[l.key]);
+    h+='<div class="review-item"><b>Plate '+(i+1)+' — '+p.side+' side</b><br>Landmarks: '+(ok?'complete':'INCOMPLETE')+'<br>';
+    if(!p.marks.length)h+='<i>No tender points marked</i>';
+    else p.marks.forEach((m,j)=>{const c=ok?classify([m.x,m.y],p.lm):null;
+      h+='<b>T'+(j+1)+'</b> · '+m.type+' · '+m.trigger+' · '+m.sev+'/10<br>'+
+         '<span style="color:#7b8b9a">'+(c?REGIONS[c.region].name+(c.confidence==='moderate'?' (near boundary)':''):'—')+'</span><br>';});
+    h+='</div>';});
+  document.getElementById('review').innerHTML=h||'<p>No photographs.</p>';}
+
+</script></body></html>
