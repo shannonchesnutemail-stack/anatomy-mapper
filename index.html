@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Anatomy Assessment Mapper</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 10px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 18px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 20px;
+            margin-bottom: 4px;
+        }
+        
+        .header p {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 16px;
+        }
+        
+        .section {
+            margin-bottom: 16px;
+            display: none;
+        }
+        
+        .section.active {
+            display: block;
+        }
+        
+        .section h2 {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 6px;
+        }
+        
+        .status-message {
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-size: 12px;
+            display: none;
+        }
+        
+        .status-message.success {
+            background: #d4edda;
+            color: #155724;
+            display: block;
+        }
+        
+        .status-message.error {
+            background: #f8d7da;
+            color: #721c24;
+            display: block;
+        }
+        
+        .status-message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            display: block;
+        }
+        
+        .markup-types {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .radio-option {
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        
+        .radio-option:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+        
+        .radio-option input[type="radio"] {
+            margin-top: 4px;
+            cursor: pointer;
+        }
+        
+        .radio-label {
+            flex: 1;
+            cursor: pointer;
+        }
+        
+        .radio-label strong {
+            display: block;
+            color: #333;
+            margin-bottom: 2px;
+        }
+        
+        .radio-label small {
+            color: #666;
+            font-size: 11px;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        button {
+            padding: 10px 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        button:active {
+            transform: scale(0.95);
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+            flex: 1;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            background: #5568d3;
+        }
+        
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+        
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+        
+        .btn-success {
+            background: #2ecc71;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #27ae60;
+        }
+        
+        .upload-btn {
+            width: 100%;
+            padding: 14px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        
+        .upload-btn:hover {
+            background: #5568d3;
+        }
+        
+        .photo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .photo-item {
+            position: relative;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            aspect-ratio: 1;
+        }
+        
+        .photo-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .photo-delete {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: #f8d7da;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 12px;
+            color: #721c24;
+        }
+        
+        .tool-controls {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .btn-tool {
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            background: white;
+            color: #333;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .btn-tool.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .zoom-controls {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+        
+        .zoom-controls button {
+            flex: 1;
+            padding: 8px;
+            font-size: 11px;
+        }
+        
+        .canvas-wrapper {
+            background: #f5f5f5;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            overflow: auto;
+            max-height: 500px;
+            position: relative;
+            margin-bottom: 10px;
+        }
+        
+        #canvas {
+            display: block;
+            background: white;
+            cursor: crosshair;
+        }
+        
+        .label-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .label-modal.active {
+            display: flex;
+        }
+        
+        .label-modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            max-width: 350px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        
+        .label-modal-content h3 {
+            margin-bottom: 12px;
+            color: #333;
+            font-size: 14px;
+        }
+        
+        .label-modal-content select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: #667eea;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .question-panel {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 10px;
+            display: none;
+        }
+        
+        .question-panel.active {
+            display: block;
+        }
+        
+        .question-panel h3 {
+            color: #856404;
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+        
+        .question-panel p {
+            color: #856404;
+            font-size: 12px;
+            line-height: 1.5;
+            margin-bottom: 10px;
+        }
+        
+        .question-panel textarea {
+            width: 100%;
+            padding: 8px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 12px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 60px;
+            margin-bottom: 10px;
+        }
+        
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 16px;
+            }
+            
+            .photo-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .label-modal-content {
+                max-width: 90%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏥 Anatomy Assessment Mapper</h1>
+            <p>Mark photos, label areas, generate PDF report</p>
+        </div>
+        
+        <div class="content">
+            <div id="statusMessage" class="status-message"></div>
+            
+            <!-- STEP 1: Choose Markup Type -->
+            <div class="section active" id="step1">
+                <h2>Step 1: Choose Markup Type</h2>
+                <div class="markup-types">
+                    <label class="radio-option">
+                        <input type="radio" name="markupType" value="reference" checked>
+                        <div class="radio-label">
+                            <strong>Reference Anatomy Only</strong>
+                            <small>Identify key landmarks (ear, clavicle, spine)</small>
+                        </div>
+                    </label>
+                    
+                    <label class="radio-option">
+                        <input type="radio" name="markupType" value="pain">
+                        <div class="radio-label">
+                            <strong>Pain Location Markup</strong>
+                            <small>Mark WHERE the pain is located</small>
+                        </div>
+                    </label>
+                    
+                    <label class="radio-option">
+                        <input type="radio" name="markupType" value="combined">
+                        <div class="radio-label">
+                            <strong>Pain + Anatomy Combined</strong>
+                            <small>Mark pain areas AND reference landmarks</small>
+                        </div>
+                    </label>
+                    
+                    <label class="radio-option">
+                        <input type="radio" name="markupType" value="assessment">
+                        <div class="radio-label">
+                            <strong>Assessment Only (No Markup)</strong>
+                            <small>Already have marked photos, just assess</small>
+                        </div>
+                    </label>
+                </div>
+                <div class="button-group">
+                    <button class="btn-primary" id="step1NextBtn">Next →</button>
+                </div>
+            </div>
+            
+            <!-- STEP 2: Upload Photos -->
+            <div class="section" id="step2">
+                <h2>Step 2: Upload Photo(s)</h2>
+                <button class="upload-btn" id="uploadBtn">📱 Photo Library</button>
+                <input type="file" id="photoInput" accept="image/*" multiple>
+                
+                <div id="photoGrid" class="photo-grid"></div>
+                
+                <div class="button-group">
+                    <button class="btn-secondary" id="step2BackBtn">← Back</button>
+                    <button class="btn-primary" id="step2NextBtn" disabled>Next →</button>
+                </div>
+            </div>
+            
+            <!-- STEP 3: Markup Photos -->
+            <div class="section" id="step3">
+                <h2>Step 3: Markup Photo <span id="photoCounter"></span></h2>
+                
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                
+                <div class="tool-controls">
+                    <button class="btn-tool active" id="pointTool">📍 Point</button>
+                    <button class="btn-tool" id="lineTool">📏 Line</button>
+                </div>
+                
+                <div class="zoom-controls">
+                    <button class="btn-tool" id="zoomOut">🔍-</button>
+                    <button class="btn-tool" id="resetZoom">1x</button>
+                    <button class="btn-tool" id="zoomIn">🔍+</button>
+                </div>
+                
+                <div class="canvas-wrapper" id="canvasWrapper">
+                    <canvas id="canvas"></canvas>
+                </div>
+                
+                <div class="button-group">
+                    <button class="btn-secondary" id="undoBtn">↶ Undo</button>
+                    <button class="btn-secondary" id="clearBtn">🗑️ Clear</button>
+                </div>
+                
+                <div class="button-group" style="margin-top: 10px;">
+                    <button class="btn-secondary" id="step3BackBtn">← Back</button>
+                    <button class="btn-primary" id="nextPhotoBtn">Next Photo →</button>
+                    <button class="btn-success" id="step3DoneBtn" style="display: none;">✓ Done</button>
+                </div>
+            </div>
+            
+            <!-- STEP 4: Assessment Questions -->
+            <div class="section" id="step4">
+                <h2>Step 4: Pain Assessment</h2>
+                
+                <div class="progress-bar">
+                    <div class="progress-fill" id="assessProgressFill"></div>
+                </div>
+                
+                <div class="question-panel active" id="questionPanel">
+                    <h3 id="questionTitle"></h3>
+                    <p id="questionText"></p>
+                    <textarea id="notesField" placeholder="Additional notes (optional)"></textarea>
+                    <div class="button-group">
+                        <button class="btn-secondary" id="skipAssessBtn">⏭️ Skip</button>
+                        <button class="btn-primary" id="nextAssessBtn">Next →</button>
+                    </div>
+                </div>
+                
+                <div class="button-group">
+                    <button class="btn-secondary" id="step4BackBtn">← Back</button>
+                    <button class="btn-success" id="step4DoneBtn" style="display: none;">✓ Proceed to PDF</button>
+                </div>
+            </div>
+            
+            <!-- STEP 5: PDF Generation -->
+            <div class="section" id="step5">
+                <h2>Step 5: Generate Report</h2>
+                <p style="margin-bottom: 10px; color: #666; font-size: 12px;">Your marked photos and assessment are ready to be compiled into a PDF report.</p>
+                <div class="button-group">
+                    <button class="btn-success" id="generatePdfBtn">📄 Generate PDF</button>
+                    <button class="btn-secondary" id="step5BackBtn">← Back</button>
+                    <button class="btn-secondary" id="startOverBtn">🔄 Start Over</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Label Modal -->
+    <div class="label-modal" id="labelModal">
+        <div class="label-modal-content">
+            <h3 id="modalTitle">What are you marking?</h3>
+            <select id="labelSelect"></select>
+            <div class="button-group">
+                <button class="btn-secondary" id="modalCancelBtn">Cancel</button>
+                <button class="btn-primary" id="modalConfirmBtn">Confirm</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // STATE
+        let markupType = 'reference';
+        let photos = [];
+        let currentPhotoIndex = 0;
+        let currentZoom = 1;
+        let currentTool = 'point';
+        let isDrawing = false;
+        let startPoint = null;
+        let markings = [];
+        let markingHistory = [];
+        let pendingLabel = null;
+        
+        let assessmentQuestions = [];
+        let currentAssessmentIndex = 0;
+        let assessmentData = [];
+        
+        // COLORS - Only 3 colors
+        const colors = {
+            anatomy: '#4ECDC4',    // Cyan/Blue for clavicle, spine, ear
+            other: '#BB8FCE',      // Purple for "Other"
+            pain: '#FF6B6B'        // Red for all pain points
+        };
+        
+        // DOM Elements
+        const statusMessage = document.getElementById('statusMessage');
+        const markupTypeRadios = document.querySelectorAll('input[name="markupType"]');
+        const step1NextBtn = document.getElementById('step1NextBtn');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const photoInput = document.getElementById('photoInput');
+        const photoGrid = document.getElementById('photoGrid');
+        const step2BackBtn = document.getElementById('step2BackBtn');
+        const step2NextBtn = document.getElementById('step2NextBtn');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const pointTool = document.getElementById('pointTool');
+        const lineTool = document.getElementById('lineTool');
+        const zoomIn = document.getElementById('zoomIn');
+        const zoomOut = document.getElementById('zoomOut');
+        const resetZoom = document.getElementById('resetZoom');
+        const undoBtn = document.getElementById('undoBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const nextPhotoBtn = document.getElementById('nextPhotoBtn');
+        const step3BackBtn = document.getElementById('step3BackBtn');
+        const step3DoneBtn = document.getElementById('step3DoneBtn');
+        const labelModal = document.getElementById('labelModal');
+        const labelSelect = document.getElementById('labelSelect');
+        const modalCancelBtn = document.getElementById('modalCancelBtn');
+        const modalConfirmBtn = document.getElementById('modalConfirmBtn');
+        const skipAssessBtn = document.getElementById('skipAssessBtn');
+        const nextAssessBtn = document.getElementById('nextAssessBtn');
+        const step4BackBtn = document.getElementById('step4BackBtn');
+        const step4DoneBtn = document.getElementById('step4DoneBtn');
+        const generatePdfBtn = document.getElementById('generatePdfBtn');
+        const step5BackBtn = document.getElementById('step5BackBtn');
+        const startOverBtn = document.getElementById('startOverBtn');
+        
+        function showStatus(message, type = 'info') {
+            statusMessage.textContent = message;
+            statusMessage.className = `status-message ${type}`;
+            setTimeout(() => {
+                statusMessage.className = 'status-message';
+            }, 3000);
+        }
+        
+        function goToStep(stepNum) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById('step' + stepNum).classList.add('active');
+        }
+        
+        // STEP 1: Markup Type Selection
+        step1NextBtn.addEventListener('click', () => {
+            markupType = document.querySelector('input[name="markupType"]:checked').value;
+            goToStep(2);
+            showStatus('Now upload your photo(s)', 'info');
+        });
+        
+        // STEP 2: Upload Photos
+        uploadBtn.addEventListener('click', () => photoInput.click());
+        
+        photoInput.addEventListener('change', (e) => {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
+            
+            let loaded = 0;
+            files.forEach((file) => {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        photos.push({
+                            name: file.name,
+                            image: img,
+                            markings: []
+                        });
+                        loaded++;
+                        
+                        if (loaded === files.length) {
+                            displayPhotos();
+                            step2NextBtn.disabled = false;
+                            showStatus(`${photos.length} photo(s) loaded`, 'success');
+                        }
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        });
+        
+        function displayPhotos() {
+            photoGrid.innerHTML = '';
+            photos.forEach((photo, index) => {
+                const div = document.createElement('div');
+                div.className = 'photo-item';
+                
+                const img = document.createElement('img');
+                img.src = photo.image.src;
+                div.appendChild(img);
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'photo-delete';
+                deleteBtn.textContent = '×';
+                deleteBtn.onclick = () => {
+                    photos.splice(index, 1);
+                    displayPhotos();
+                    if (photos.length === 0) step2NextBtn.disabled = true;
+                };
+                div.appendChild(deleteBtn);
+                
+                photoGrid.appendChild(div);
+            });
+        }
+        
+        step2BackBtn.addEventListener('click', () => goToStep(1));
+        
+        step2NextBtn.addEventListener('click', () => {
+            if (markupType === 'assessment') {
+                // Skip to assessment
+                buildAssessmentQuestions();
+                goToStep(4);
+                showStatus('Review your marked photos and answer assessment questions', 'info');
+            } else {
+                // Go to markup
+                currentPhotoIndex = 0;
+                markingHistory = [];
+                goToStep(3);
+                loadPhoto(0);
+                showStatus('Start marking the photo', 'info');
+            }
+        });
+        
+        // STEP 3: Markup Photos
+        function loadPhoto(index) {
+            if (index >= photos.length) return;
+            
+            currentPhotoIndex = index;
+            currentZoom = 1;
+            markings = photos[index].markings || [];
+            currentTool = 'point';
+            
+            pointTool.classList.add('active');
+            lineTool.classList.remove('active');
+            
+            document.getElementById('photoCounter').textContent = `(${index + 1} of ${photos.length})`;
+            document.getElementById('progressFill').style.width = ((index + 1) / photos.length * 100) + '%';
+            
+            if (index < photos.length - 1) {
+                nextPhotoBtn.style.display = 'block';
+                step3DoneBtn.style.display = 'none';
+            } else {
+                nextPhotoBtn.style.display = 'none';
+                step3DoneBtn.style.display = 'block';
+            }
+            
+            resizeCanvas();
+            drawCanvas();
+        }
+        
+        function resizeCanvas() {
+            const wrapper = document.getElementById('canvasWrapper');
+            const photo = photos[currentPhotoIndex];
+            const maxWidth = wrapper.clientWidth || 400;
+            const maxHeight = 500;
+            
+            if (photo) {
+                const ratio = photo.image.width / photo.image.height;
+                let width = maxWidth;
+                let height = maxWidth / ratio;
+                
+                if (height > maxHeight) {
+                    height = maxHeight;
+                    width = maxHeight * ratio;
+                }
+                
+                canvas.width = width * currentZoom;
+                canvas.height = height * currentZoom;
+            }
+        }
+        
+        function drawCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const photo = photos[currentPhotoIndex];
+            if (photo) {
+                ctx.drawImage(photo.image, 0, 0, canvas.width, canvas.height);
+            }
+            
+            markings.forEach((marking) => {
+                ctx.strokeStyle = marking.color;
+                ctx.fillStyle = marking.color;
+                ctx.lineWidth = 3;
+                
+                if (marking.type === 'point') {
+                    ctx.beginPath();
+                    ctx.arc(marking.x, marking.y, 8, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.globalAlpha = 0.3;
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
+                } else if (marking.type === 'line') {
+                    ctx.beginPath();
+                    ctx.moveTo(marking.x1, marking.y1);
+                    ctx.lineTo(marking.x2, marking.y2);
+                    ctx.stroke();
+                }
+            });
+        }
+        
+        pointTool.addEventListener('click', () => {
+            currentTool = 'point';
+            pointTool.classList.add('active');
+            lineTool.classList.remove('active');
+        });
+        
+        lineTool.addEventListener('click', () => {
+            currentTool = 'line';
+            lineTool.classList.add('active');
+            pointTool.classList.remove('active');
+        });
+        
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            startPoint = { x: (e.clientX - rect.left) / currentZoom, y: (e.clientY - rect.top) / currentZoom };
+            isDrawing = true;
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDrawing || currentTool !== 'line') return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / currentZoom;
+            const y = (e.clientY - rect.top) / currentZoom;
+            
+            drawCanvas();
+            ctx.strokeStyle = '#999';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(startPoint.x, startPoint.y);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        });
+        
+        canvas.addEventListener('mouseup', (e) => {
+            if (!isDrawing) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / currentZoom;
+            const y = (e.clientY - rect.top) / currentZoom;
+            
+            if (currentTool === 'point') {
+                pendingLabel = { type: 'point', x: startPoint.x, y: startPoint.y };
+            } else if (currentTool === 'line') {
+                pendingLabel = { type: 'line', x1: startPoint.x, y1: startPoint.y, x2: x, y2: y };
+            }
+            
+            isDrawing = false;
+            startPoint = null;
+            
+            if (pendingLabel) {
+                showLabelModal();
+            }
+        });
+        
+        function showLabelModal() {
+            labelSelect.innerHTML = '';
+            
+            const options = [];
+            
+            if (markupType === 'reference' || markupType === 'combined') {
+                options.push(
+                    { value: 'clavicle', label: 'Clavicle', color: colors.anatomy },
+                    { value: 'spine', label: 'Spine Base', color: colors.anatomy },
+                    { value: 'ear', label: 'Ear', color: colors.anatomy }
+                );
+            }
+            
+            if (markupType === 'pain' || markupType === 'combined') {
+                options.push(
+                    { value: 'sharp-mid', label: 'Sharp - Mid-Lateral Neck', color: colors.pain },
+                    { value: 'dull-mid', label: 'Dull - Mid-Lateral Neck', color: colors.pain },
+                    { value: 'sharp-lower', label: 'Sharp - Lower Neck', color: colors.pain },
+                    { value: 'dull-lower', label: 'Dull - Lower Neck', color: colors.pain },
+                    { value: 'tension-shoulder', label: 'Tension - Shoulder Junction', color: colors.pain },
+                    { value: 'sharp-shoulder', label: 'Sharp - Shoulder Junction', color: colors.pain }
+                );
+            }
+            
+            options.push(
+                { value: 'other', label: 'Other', color: colors.other }
+            );
+            
+            options.forEach((opt) => {
+                const optElement = document.createElement('option');
+                optElement.value = opt.value;
+                optElement.textContent = opt.label;
+                optElement.dataset.color = opt.color;
+                labelSelect.appendChild(optElement);
+            });
+            
+            labelModal.classList.add('active');
+        }
+        
+        modalConfirmBtn.addEventListener('click', () => {
+            if (!pendingLabel) return;
+            
+            const selectedOption = labelSelect.options[labelSelect.selectedIndex];
+            const color = selectedOption.dataset.color;
+            
+            pendingLabel.color = color;
+            pendingLabel.label = selectedOption.text;
+            
+            markings.push(pendingLabel);
+            photos[currentPhotoIndex].markings = markings;
+            
+            pendingLabel = null;
+            labelModal.classList.remove('active');
+            drawCanvas();
+            showStatus(`Marked: ${selectedOption.text}`, 'success');
+        });
+        
+        modalCancelBtn.addEventListener('click', () => {
+            pendingLabel = null;
+            labelModal.classList.remove('active');
+            drawCanvas();
+        });
+        
+        zoomIn.addEventListener('click', () => {
+            currentZoom += 0.2;
+            resizeCanvas();
+            drawCanvas();
+        });
+        
+        zoomOut.addEventListener('click', () => {
+            currentZoom = Math.max(0.5, currentZoom - 0.2);
+            resizeCanvas();
+            drawCanvas();
+        });
+        
+        resetZoom.addEventListener('click', () => {
+            currentZoom = 1;
+            resizeCanvas();
+            drawCanvas();
+        });
+        
+        undoBtn.addEventListener('click', () => {
+            if (markings.length > 0) {
+                markings.pop();
+                photos[currentPhotoIndex].markings = markings;
+                drawCanvas();
+            }
+        });
+        
+        clearBtn.addEventListener('click', () => {
+            if (confirm('Clear all markings on this photo?')) {
+                markings = [];
+                photos[currentPhotoIndex].markings = [];
+                drawCanvas();
+            }
+        });
+        
+        nextPhotoBtn.addEventListener('click', () => {
+            if (currentPhotoIndex < photos.length - 1) {
+                loadPhoto(currentPhotoIndex + 1);
+            }
+        });
+        
+        step3BackBtn.addEventListener('click', () => goToStep(2));
+        
+        step3DoneBtn.addEventListener('click', () => {
+            buildAssessmentQuestions();
+            goToStep(4);
+            showStatus('Review your pain assessment', 'info');
+        });
+        
+        // STEP 4: Assessment
+        function buildAssessmentQuestions() {
+            assessmentQuestions = [];
+            
+            photos.forEach((photo, photoIdx) => {
+                photo.markings.forEach((marking) => {
+                    const isAnatomyMarking = ['clavicle', 'spine', 'ear'].includes(marking.label?.split(' - ')[0]);
+                    
+                    if (!isAnatomyMarking && marking.label !== 'Other') {
+                        assessmentQuestions.push({
+                            photoIndex: photoIdx,
+                            marking: marking,
+                            label: marking.label
+                        });
+                    }
+                });
+            });
+            
+            currentAssessmentIndex = 0;
+            assessmentData = [];
+            
+            if (assessmentQuestions.length === 0) {
+                step4DoneBtn.style.display = 'block';
+                document.getElementById('questionPanel').style.display = 'none';
+            } else {
+                showAssessmentQuestion();
+            }
+        }
+        
+        function showAssessmentQuestion() {
+            if (currentAssessmentIndex >= assessmentQuestions.length) {
+                document.getElementById('questionPanel').classList.remove('active');
+                step4DoneBtn.style.display = 'block';
+                showStatus('Assessment complete', 'success');
+                updateAssessProgress();
+                return;
+            }
+            
+            const q = assessmentQuestions[currentAssessmentIndex];
+            document.getElementById('questionTitle').textContent = `Pain Area ${currentAssessmentIndex + 1}`;
+            document.getElementById('questionText').textContent = q.label;
+            document.getElementById('notesField').value = '';
+            document.getElementById('questionPanel').classList.add('active');
+            updateAssessProgress();
+        }
+        
+        function updateAssessProgress() {
+            const percentage = (currentAssessmentIndex / (assessmentQuestions.length || 1)) * 100;
+            document.getElementById('assessProgressFill').style.width = percentage + '%';
+        }
+        
+        skipAssessBtn.addEventListener('click', () => {
+            currentAssessmentIndex++;
+            showAssessmentQuestion();
+        });
+        
+        nextAssessBtn.addEventListener('click', () => {
+            const notes = document.getElementById('notesField').value;
+            const q = assessmentQuestions[currentAssessmentIndex];
+            assessmentData.push({
+                label: q.label,
+                notes: notes
+            });
+            currentAssessmentIndex++;
+            showAssessmentQuestion();
+        });
+        
+        step4BackBtn.addEventListener('click', () => goToStep(3));
+        
+        step4DoneBtn.addEventListener('click', () => goToStep(5));
+        
+        // STEP 5: PDF Generation
+        generatePdfBtn.addEventListener('click', () => {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            
+            let yPos = 15;
+            
+            // Title page
+            doc.setFontSize(18);
+            doc.text('Anatomical Assessment Report', 15, yPos);
+            yPos += 10;
+            
+            doc.setFontSize(10);
+            doc.text(`Date: ${new Date().toLocaleDateString()}`, 15, yPos);
+            yPos += 8;
+            
+            doc.line(15, yPos, 195, yPos);
+            yPos += 10;
+            
+            // Photos with markings
+            doc.setFontSize(12);
+            doc.text('Marked Photos:', 15, yPos);
+            yPos += 8;
+            
+            photos.forEach((photo, idx) => {
+                if (yPos > 250) {
+                    doc.addPage();
+                    yPos = 15;
+                }
+                
+                doc.setFontSize(10);
+                doc.text(`Photo ${idx + 1}: ${photo.name}`, 15, yPos);
+                yPos += 4;
+                
+                // Convert canvas to image
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = photo.image.width;
+                tempCanvas.height = photo.image.height;
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.drawImage(photo.image, 0, 0);
+                
+                photo.markings.forEach((marking) => {
+                    tempCtx.strokeStyle = marking.color;
+                    tempCtx.lineWidth = 4;
+                    tempCtx.fillStyle = marking.color;
+                    
+                    if (marking.type === 'point') {
+                        tempCtx.beginPath();
+                        tempCtx.arc(marking.x, marking.y, 12, 0, Math.PI * 2);
+                        tempCtx.stroke();
+                        tempCtx.globalAlpha = 0.2;
+                        tempCtx.fill();
+                        tempCtx.globalAlpha = 1;
+                    } else if (marking.type === 'line') {
+                        tempCtx.beginPath();
+                        tempCtx.moveTo(marking.x1, marking.y1);
+                        tempCtx.lineTo(marking.x2, marking.y2);
+                        tempCtx.stroke();
+                    }
+                });
+                
+                const imgData = tempCanvas.toDataURL('image/jpeg', 0.8);
+                const imgWidth = 160;
+                const imgHeight = (tempCanvas.height * imgWidth) / tempCanvas.width;
+                
+                doc.addImage(imgData, 'JPEG', 20, yPos, imgWidth, Math.min(imgHeight, 80));
+                yPos += Math.min(imgHeight, 80) + 6;
+                
+                photo.markings.forEach((marking) => {
+                    if (yPos > 270) {
+                        doc.addPage();
+                        yPos = 15;
+                    }
+                    doc.setFontSize(9);
+                    doc.text(`• ${marking.label}`, 20, yPos);
+                    yPos += 4;
+                });
+                
+                yPos += 4;
+            });
+            
+            // Assessment Summary
+            if (assessmentData.length > 0) {
+                if (yPos > 240) {
+                    doc.addPage();
+                    yPos = 15;
+                }
+                
+                doc.setFontSize(12);
+                doc.text('Assessment Notes:', 15, yPos);
+                yPos += 8;
+                
+                doc.setFontSize(9);
+                assessmentData.forEach((data) => {
+                    if (yPos > 270) {
+                        doc.addPage();
+                        yPos = 15;
+                    }
+                    doc.text(`${data.label}:`, 20, yPos);
+                    yPos += 4;
+                    if (data.notes) {
+                        const wrappedText = doc.splitTextToSize(data.notes, 160);
+                        doc.text(wrappedText, 25, yPos);
+                        yPos += wrappedText.length * 4 + 4;
+                    }
+                });
+            }
+            
+            // Anatomical Guide
+            doc.addPage();
+            
+            const anatomyGuide = `ANATOMICAL STRUCTURES IN NECK/SHOULDER PAIN
+
+PRIMARY MUSCLES:
+
+TRAPEZIUS (Upper)
+- Large muscle spanning from skull/neck to shoulder blade
+- Most common source of neck/shoulder pain pattern
+- Covers upper back, neck, and shoulder region
+- Frequently affected by tension and poor posture
+
+LEVATOR SCAPULAE
+- Deep muscle connecting cervical spine (C1-C4) to shoulder blade
+- Commonly causes referred pain to lateral neck and shoulder areas
+- Located beneath trapezius
+- Often tight from forward head posture or stress
+
+STERNOCLEIDOMASTOID (SCM)
+- Diagonal muscle from collarbone/sternum to behind ear
+- Located on lateral (side) neck
+- Frequently involved in one-sided neck pain
+- Often tight from computer posture or neck strain
+
+DELTOID (Upper/Anterior)
+- Shoulder cap muscle
+- Tenderness often radiates to lateral neck and shoulder junction
+
+PRIMARY NERVES & STRUCTURES:
+
+ACCESSORY NERVE (CN XI)
+- Runs through posterior triangle of neck
+- Innervates trapezius and sternocleidomastoid
+- Irritation causes sharp localized tenderness
+- Can cause referred pain to shoulders
+
+VAGUS NERVE (CN X)
+- Runs through lateral neck region
+- Irritation can cause localized tenderness and sensation changes
+
+CERVICAL PLEXUS (C1-C4)
+- Network of nerves from upper cervical spine
+- Affects sensation and movement in neck and shoulder areas
+
+CERVICAL SPINE & FACET JOINTS
+- C1-C5 vertebrae with intervertebral discs
+- Small facet joints between vertebrae
+- Most common cause of one-sided neck pain
+- Irritation causes referred pain to shoulder/arm
+
+LIGAMENTS & CONNECTIVE TISSUE:
+- Anterior/Posterior longitudinal ligaments support spine
+- Cervical facet ligaments stabilize small joints
+- Nuchal ligament at base of skull
+- Often involved in chronic neck tension
+
+CLAVICLE (Collarbone)
+- Horizontal bone at top of shoulder
+- Key landmark for neck-shoulder interface
+- Site of common tension and referred pain
+
+RECOMMENDATIONS FOR HEALTHCARE PROVIDER:
+- Comprehensive palpation of marked tender areas
+- Cervical range of motion testing
+- Neurological assessment for nerve involvement
+- Muscle strength and tension evaluation
+- Posture analysis
+- Consider: muscle strain vs. cervical facet vs. nerve irritation
+- Imaging if conservative treatment ineffective`;
+            
+            doc.setFontSize(10);
+            const splitText = doc.splitTextToSize(anatomyGuide, 170);
+            doc.text(splitText, 15, 15);
+            
+            doc.save('Anatomical_Assessment_Report.pdf');
+            showStatus('PDF downloaded!', 'success');
+        });
+        
+        step5BackBtn.addEventListener('click', () => goToStep(4));
+        
+        startOverBtn.addEventListener('click', () => {
+            photos = [];
+            markings = [];
+            assessmentQuestions = [];
+            assessmentData = [];
+            currentPhotoIndex = 0;
+            currentAssessmentIndex = 0;
+            photoGrid.innerHTML = '';
+            photoInput.value = '';
+            goToStep(1);
+            showStatus('Ready to start over', 'info');
+        });
+    </script>
+</body>
+</html>
