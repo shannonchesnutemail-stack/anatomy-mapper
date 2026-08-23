@@ -1,0 +1,513 @@
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shannon &amp; Brandi · Overnight Getaway Planner</title>
+<style>
+  :root{
+    --ink:#1f2421; --muted:#6b7470; --line:#e4e2dc; --bg:#f7f5f0;
+    --card:#ffffff; --accent:#6b7d5c; --accent-dk:#4f5e44; --gold:#b08d57;
+    --shadow:0 8px 30px rgba(31,36,33,.08);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Georgia',serif;background:var(--bg);color:var(--ink);line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 22px}
+
+  .hero{position:relative;min-height:420px;display:flex;align-items:center;justify-content:center;text-align:center;
+    background:linear-gradient(135deg,#8aa17a,#5f7350 55%,#3f4d36);overflow:hidden}
+  .hero svg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .hero-inner{position:relative;z-index:2;padding:60px 22px;color:#fff}
+  .hero-inner .eyebrow{color:#f3e8d2}
+  .hero h1{color:#fff;text-shadow:0 2px 18px rgba(0,0,0,.3)}
+  .hero .sub{color:#f4f1ea;text-shadow:0 1px 8px rgba(0,0,0,.25)}
+  .eyebrow{font-family:'Helvetica Neue',Arial,sans-serif;letter-spacing:.32em;text-transform:uppercase;font-size:11px;color:var(--gold);font-weight:600}
+  h1{font-size:clamp(30px,5vw,48px);font-weight:400;margin:14px 0 8px;letter-spacing:-.5px}
+  .sub{color:var(--muted);font-size:16px;max-width:640px;margin:0 auto}
+  .divider{width:54px;height:2px;background:var(--gold);margin:24px auto}
+
+  .filterzone{padding:34px 22px 8px}
+  .filter-label{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--muted);text-align:center;margin-bottom:12px;font-weight:600}
+  .controls{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:26px}
+  .filter{font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;letter-spacing:.04em;border:1px solid var(--line);background:#fff;color:var(--muted);
+    padding:9px 18px;border-radius:30px;cursor:pointer;transition:.25s}
+  .filter:hover{border-color:var(--accent);color:var(--accent)}
+  .filter.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .controls.budget .filter.active{background:var(--gold);border-color:var(--gold)}
+  .controls.budget .filter:hover{border-color:var(--gold);color:var(--gold)}
+
+  .count{text-align:center;font-family:'Helvetica Neue',Arial,sans-serif;font-size:12.5px;color:var(--muted);margin:0 0 22px}
+  .count b{color:var(--accent-dk)}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;padding-bottom:20px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow);
+    display:flex;flex-direction:column;transition:transform .25s, box-shadow .25s}
+  .card:hover{transform:translateY(-4px);box-shadow:0 16px 44px rgba(31,36,33,.13)}
+
+  .banner{height:128px;position:relative;overflow:hidden}
+  .banner svg{width:100%;height:100%;display:block}
+  .banner .label{position:absolute;left:18px;bottom:14px;color:#fff;font-family:'Helvetica Neue',Arial,sans-serif;
+    font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;text-shadow:0 1px 6px rgba(0,0,0,.4)}
+  .price-chip{position:absolute;right:14px;top:14px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;font-weight:700;
+    letter-spacing:.06em;color:#fff;padding:5px 12px;border-radius:20px;backdrop-filter:blur(3px)}
+  .price-chip.budget{background:rgba(79,94,68,.85)}
+  .price-chip.mid{background:rgba(176,141,87,.9)}
+  .price-chip.treat{background:rgba(120,80,90,.85)}
+
+  .card-top{padding:22px 26px 16px;border-bottom:1px solid var(--line)}
+  .badge{display:inline-block;font-family:'Helvetica Neue',Arial,sans-serif;font-size:10px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--accent-dk);background:#eef1e9;padding:5px 11px;border-radius:20px;font-weight:600;margin-bottom:12px}
+  .card h2{font-size:23px;font-weight:400;margin-bottom:4px}
+  .place{font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;color:var(--muted);letter-spacing:.03em}
+  .meta{display:flex;gap:18px;margin-top:16px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:12.5px;color:var(--muted)}
+  .meta span b{color:var(--ink);font-weight:600;display:block;font-size:14px}
+  .card-body{padding:22px 26px;flex:1}
+  .why{font-size:14.5px;color:var(--muted);margin-bottom:18px;font-style:italic}
+
+  details{border-top:1px dashed var(--line);padding:14px 0}
+  details:first-of-type{border-top:none}
+  summary{cursor:pointer;font-family:'Helvetica Neue',Arial,sans-serif;font-size:13.5px;font-weight:600;letter-spacing:.02em;
+    list-style:none;display:flex;justify-content:space-between;align-items:center;color:var(--ink)}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"+";color:var(--accent);font-size:18px;transition:.2s}
+  details[open] summary::after{content:"\2013"}
+  .tl{margin:12px 0 4px;padding-left:4px}
+  .tl li{list-style:none;display:flex;gap:12px;padding:7px 0;font-size:14px}
+  .tl .t{font-family:'Helvetica Neue',Arial,sans-serif;font-weight:600;color:var(--accent-dk);min-width:62px;font-size:12.5px;padding-top:2px}
+  .maplink{display:inline-block;font-family:'Helvetica Neue',Arial,sans-serif;font-size:12px;color:var(--accent);
+    text-decoration:none;margin-left:4px;border-bottom:1px dotted var(--accent)}
+  .maplink:hover{color:var(--accent-dk);border-bottom-style:solid}
+  .maplink::before{content:"\1F4CD ";font-size:11px}
+
+  .cost{font-family:'Helvetica Neue',Arial,sans-serif;font-size:13.5px;width:100%;border-collapse:collapse;margin-top:6px}
+  .cost td{padding:6px 0;border-bottom:1px solid var(--line);color:var(--muted)}
+  .cost td:last-child{text-align:right;color:var(--ink);font-weight:600}
+  .cost tr.total td{border-bottom:none;color:var(--ink);font-weight:700;padding-top:10px;font-size:15px}
+
+  .card-foot{padding:18px 26px 26px;border-top:1px solid var(--line)}
+  .choose{width:100%;font-family:'Helvetica Neue',Arial,sans-serif;font-size:14px;letter-spacing:.05em;border:none;
+    background:var(--accent);color:#fff;padding:14px;border-radius:30px;cursor:pointer;transition:.25s;font-weight:600}
+  .choose:hover{background:var(--accent-dk)}
+  .choose.picked{background:var(--gold)}
+  .choose.picked::before{content:"\2713  "}
+
+  .summary-bar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);
+    box-shadow:0 -8px 30px rgba(31,36,33,.08);transform:translateY(110%);transition:.35s;z-index:50}
+  .summary-bar.show{transform:translateY(0)}
+  .sb-inner{max-width:1080px;margin:0 auto;padding:14px 22px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+  .sb-inner p{font-family:'Helvetica Neue',Arial,sans-serif;font-size:14px}
+  .sb-inner p b{color:var(--accent-dk)}
+  .sb-cost{font-size:18px;font-weight:700}
+  .sb-actions{display:flex;gap:10px;flex-wrap:wrap}
+  .btn-sm{font-family:'Helvetica Neue',Arial,sans-serif;padding:10px 18px;border-radius:24px;cursor:pointer;font-size:13px;font-weight:600;border:none}
+  .view-btn{background:var(--accent);color:#fff}
+  .view-btn:hover{background:var(--accent-dk)}
+  .dir-btn{background:var(--accent-dk);color:#fff}
+  .dir-btn:hover{background:#3a4631}
+  .share-btn{background:var(--gold);color:#fff}
+  .share-btn:hover{background:#9a784a}
+  .clear{background:none;border:1px solid var(--line);color:var(--muted)}
+  .clear:hover{border-color:var(--accent);color:var(--accent)}
+
+  .phone-view{position:fixed;inset:0;background:rgba(31,36,33,.55);backdrop-filter:blur(4px);z-index:100;display:none;
+    align-items:flex-start;justify-content:center;overflow-y:auto;padding:24px 14px 60px}
+  .phone-view.show{display:flex}
+  .ticket{background:var(--bg);width:100%;max-width:430px;border-radius:22px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.4);animation:rise .4s ease}
+  @keyframes rise{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+  .ticket-head{position:relative;color:#fff;padding:26px 22px 30px;overflow:hidden}
+  .ticket-head svg{position:absolute;inset:0;width:100%;height:100%}
+  .ticket-head .th-content{position:relative;z-index:2}
+  .ticket-head .eyebrow{color:#f3e8d2}
+  .ticket-head h2{font-size:26px;font-weight:400;margin-top:8px;text-shadow:0 2px 10px rgba(0,0,0,.3)}
+  .ticket-head .th-place{font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;margin-top:4px;opacity:.92}
+  .perf{height:18px;background:var(--bg);position:relative}
+  .perf::before,.perf::after{content:"";position:absolute;top:-9px;width:18px;height:18px;background:rgba(31,36,33,.55);border-radius:50%}
+  .perf::before{left:-9px}.perf::after{right:-9px}
+  .ticket-body{padding:6px 22px 22px}
+  .stub{display:flex;justify-content:space-between;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;
+    text-transform:uppercase;letter-spacing:.1em;color:var(--muted);border-bottom:1px solid var(--line);padding:14px 0}
+  .stub b{display:block;color:var(--ink);font-size:14px;letter-spacing:0;text-transform:none;margin-top:2px}
+  .day-block{margin-top:18px}
+  .day-block h3{font-family:'Helvetica Neue',Arial,sans-serif;font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--accent-dk);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+  .day-block h3::before{content:"";width:22px;height:2px;background:var(--gold)}
+  .pt{display:flex;gap:12px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:14px}
+  .pt .pt-t{font-family:'Helvetica Neue',Arial,sans-serif;font-weight:700;color:var(--accent-dk);min-width:58px;font-size:12.5px}
+  .pt .pt-map{display:block;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11.5px;color:var(--accent);text-decoration:none;margin-top:2px}
+  .pt .pt-map::before{content:"\1F4CD ";}
+  .ticket-cost{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-top:18px}
+  .ticket-cost .tc-row{display:flex;justify-content:space-between;font-family:'Helvetica Neue',Arial,sans-serif;font-size:14px;font-weight:700}
+  .ticket-cost .tc-row span:last-child{color:var(--accent-dk)}
+  .ticket-actions{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+  .ticket-actions button{flex:1;min-width:88px;font-family:'Helvetica Neue',Arial,sans-serif;padding:13px;border-radius:24px;font-size:13.5px;font-weight:600;cursor:pointer;border:none}
+  .dir2-btn{background:var(--accent-dk);color:#fff}
+  .dir2-btn:hover{background:#3a4631}
+  .print-btn{background:var(--accent);color:#fff}
+  .share2-btn{background:var(--gold);color:#fff}
+  .close-btn{background:#fff;border:1px solid var(--line);color:var(--muted)}
+  .tip{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11.5px;color:var(--muted);text-align:center;margin-top:14px;line-height:1.5}
+
+  .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;
+    font-family:'Helvetica Neue',Arial,sans-serif;font-size:13.5px;padding:12px 22px;border-radius:30px;opacity:0;
+    transition:.3s;z-index:200;pointer-events:none;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  .shared-banner{display:none;background:#eef1e9;border:1px solid #d4dcc8;border-radius:14px;
+    padding:14px 18px;margin:0 22px 10px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:13.5px;color:var(--accent-dk);text-align:center}
+  .shared-banner.show{display:block}
+  .shared-banner b{color:var(--ink)}
+
+  .tag{display:inline-block;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;color:var(--muted);background:#fff;border:1px solid var(--line);padding:4px 10px;border-radius:14px;margin:3px 3px 0 0}
+  .tags{margin-top:14px}
+  footer{text-align:center;padding:46px 22px 130px;color:var(--muted);font-family:'Helvetica Neue',Arial,sans-serif;font-size:12.5px}
+
+  @media print{
+    body *{visibility:hidden}
+    .phone-view, .phone-view *{visibility:visible}
+    .phone-view{position:absolute;background:#fff;padding:0;display:block!important}
+    .ticket{box-shadow:none;max-width:100%}
+    .ticket-actions,.tip{display:none}
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <svg viewBox="0 0 1200 420" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6d99b"/><stop offset="0.5" stop-color="#e9b97e"/><stop offset="1" stop-color="#c98f63"/></linearGradient></defs>
+    <rect width="1200" height="420" fill="url(#sky)"/>
+    <circle cx="600" cy="150" r="70" fill="#fff3d6" opacity="0.9"/>
+    <path d="M0 250 Q200 200 400 240 T800 235 T1200 245 V420 H0 Z" fill="#7e9166"/>
+    <path d="M0 300 Q300 250 600 295 T1200 300 V420 H0 Z" fill="#5f7350"/>
+    <path d="M0 350 Q300 320 600 350 T1200 355 V420 H0 Z" fill="#46563a"/>
+    <path d="M540 420 L580 270 L620 270 L660 420 Z" fill="#3a4731"/>
+    <line x1="600" y1="290" x2="600" y2="410" stroke="#f3e8d2" stroke-width="5" stroke-dasharray="16 14"/>
+    <g opacity="0.85"><ellipse cx="250" cy="120" rx="55" ry="22" fill="#fff" opacity="0.7"/><ellipse cx="950" cy="95" rx="70" ry="26" fill="#fff" opacity="0.6"/></g>
+  </svg>
+  <div class="hero-inner">
+    <div class="eyebrow">A Curated Overnight Escape · Departs 12:30 PM</div>
+    <h1>Shannon &amp; Brandi's Getaway</h1>
+    <div class="divider"></div>
+    <p class="sub">Eight relaxed itineraries from Lincoln — for every budget. Filter, map each stop, route the whole trip, then share your pick with a single link.</p>
+  </div>
+</div>
+
+<div class="shared-banner" id="sharedBanner"></div>
+
+<div class="wrap">
+  <div class="filterzone">
+    <div class="filter-label">Filter by Budget</div>
+    <div class="controls budget" id="budgetControls">
+      <button class="filter active" data-b="all">Any Budget</button>
+      <button class="filter" data-b="budget">Budget-Friendly · Under $350</button>
+      <button class="filter" data-b="mid">Mid-Range · $350–$550</button>
+      <button class="filter" data-b="treat">Treat Yourselves · $550+</button>
+    </div>
+    <div class="filter-label">Filter by Style</div>
+    <div class="controls" id="styleControls">
+      <button class="filter active" data-f="all">All Trips</button>
+      <button class="filter" data-f="short">Short Drive</button>
+      <button class="filter" data-f="long">Scenic Drive</button>
+      <button class="filter" data-f="animals">Animal Encounters</button>
+      <button class="filter" data-f="spa">Spa &amp; Relax</button>
+    </div>
+    <p class="count" id="count">Showing <b>8</b> of 8 trips</p>
+  </div>
+
+  <div class="grid" id="grid"></div>
+</div>
+
+<footer>
+  Crafted for Shannon &amp; Brandi · Estimates are approximate (2026) and vary by season, day &amp; availability.<br>
+  Confirm hours &amp; reservations before you go. Map pins &amp; routes open in Google Maps. Happy travels.
+</footer>
+
+<div class="summary-bar" id="bar">
+  <div class="sb-inner">
+    <p>Your pick: <b id="pickName">—</b> · Est. <span class="sb-cost" id="pickCost">$0</span></p>
+    <div class="sb-actions">
+      <button class="btn-sm view-btn" id="viewBtn">View on Phone</button>
+      <button class="btn-sm dir-btn" id="dirBtn">Get Directions</button>
+      <button class="btn-sm share-btn" id="shareBtn">Share Link</button>
+      <button class="btn-sm clear" id="clearBtn">Change</button>
+    </div>
+  </div>
+</div>
+
+<div class="phone-view" id="phoneView">
+  <div class="ticket">
+    <div class="ticket-head">
+      <svg viewBox="0 0 430 130" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+        <defs><linearGradient id="tg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6b7d5c"/><stop offset="1" stop-color="#3f4d36"/></linearGradient></defs>
+        <rect width="430" height="130" fill="url(#tg)"/>
+        <path d="M0 96 Q110 76 215 92 T430 92 V130 H0 Z" fill="#56684a" opacity="0.7"/>
+        <line x1="0" y1="118" x2="430" y2="118" stroke="#f3e8d2" stroke-width="3" stroke-dasharray="16 12" opacity="0.7"/>
+      </svg>
+      <div class="th-content">
+        <div class="eyebrow">Shannon &amp; Brandi · Road Trip</div>
+        <h2 id="tvName">—</h2>
+        <div class="th-place" id="tvPlace">—</div>
+      </div>
+    </div>
+    <div class="perf"></div>
+    <div class="ticket-body">
+      <div class="stub">
+        <div>Depart<b>12:30 PM · Lincoln</b></div>
+        <div style="text-align:right">Stay<b>1 Night</b></div>
+      </div>
+      <div class="day-block"><h3>Day One</h3><div id="tvDay1"></div></div>
+      <div class="day-block"><h3>Day Two</h3><div id="tvDay2"></div></div>
+      <div class="ticket-cost"><div class="tc-row"><span>Estimated Total (for two)</span><span id="tvCost">$0</span></div></div>
+      <div class="ticket-actions">
+        <button class="dir2-btn" id="dir2Btn">Directions</button>
+        <button class="print-btn" id="printBtn">Save / Print</button>
+        <button class="share2-btn" id="share2Btn">Share</button>
+        <button class="close-btn" id="closeBtn">Close</button>
+      </div>
+      <p class="tip">Tap <b>Directions</b> for the full driving route, <b>Share</b> to copy a link, <b>Save / Print</b> for a PDF, or screenshot to keep it offline. Each stop also links to Google Maps.</p>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">Link copied to clipboard ✓</div>
+
+<script>
+  // ---- TRIP DATA (single source of truth) ----
+  // d1/d2 rows: time | description | google maps query
+  const TRIPS=[
+    {id:"brownville-budget",name:"Brownville Day &amp; Stay",place:"Brownville, NE · ~1 hr 20",cost:268,tier:"budget",cat:"short animals",badge:"Budget Pick",
+     why:"Same charming river village — stripped to the essentials. Free antiquing, river walks, a swap-meet morning and pick-your-own orchard. Big charm, small spend.",
+     tags:["Antiques","Swap Meet","River Walk","Orchard"],
+     banner:`<rect width="400" height="128" fill="#9cc1d4"/><path d="M0 88 Q200 70 400 86 V128 H0 Z" fill="#6fa3b5"/><path d="M0 100 Q200 86 400 100 V128 H0 Z" fill="#4f8499"/><ellipse cx="200" cy="120" rx="200" ry="14" fill="#3d6c80"/><rect x="60" y="70" width="26" height="26" fill="#c9a86b"/><rect x="100" y="64" width="22" height="32" fill="#b08d57"/><rect x="290" y="68" width="24" height="28" fill="#c9a86b"/><rect x="64" y="58" width="18" height="12" fill="#8a6b3f"/>`,
+     bannerLabel:"Brownville · Easy &amp; Affordable",
+     d1:[["1:50p","Brownville antique &amp; book shops (free to browse)","Brownville NE antique shops"],["3:30p","Self-guided river walk &amp; Rec Area","Brownville State Recreation Area NE"],["5:00p","Check in — budget riverside motel / cabin","Brownville NE lodging"],["7:00p","Casual dinner at the Brownville café","Brownville NE restaurant"]],
+     d2:[["9:00a","Coffee + weekend flea / swap stalls","Brownville NE flea market"],["10:30a","Kimmel Orchard (free entry, pay-what-you-pick)","Kimmel Orchard Nebraska City"],["12:00p","Picnic lunch, then easy drive home","Lincoln NE"]],
+     costs:[["Budget motel / cabin (1 night)","$95"],["Casual dinner for two","$50"],["Coffee + picnic lunch","$35"],["Orchard pick (light)","$25"],["Antique / swap finds","$30"],["Gas (~165 mi)","$33"]]},
+
+    {id:"nebcity-budget",name:"Nebraska City Nature Escape",place:"Nebraska City, NE · ~50 min",cost:312,tier:"budget",cat:"short animals",badge:"Budget Pick",
+     why:"The shortest, easiest escape — Arbor Day Farm trails, a farmers market, an alpaca farm, and historic antiquing. Minimal gas, maximum relaxation.",
+     tags:["Nature Trails","Farmers Market","Alpacas","Antiques","Orchard"],
+     banner:`<rect width="400" height="128" fill="#bcd49a"/><path d="M0 80 Q120 60 240 80 T400 78 V128 H0 Z" fill="#8aab63"/><path d="M0 100 Q140 84 280 100 T400 100 V128 H0 Z" fill="#6b8c4a"/><g fill="#5a4a32"><rect x="80" y="60" width="10" height="40"/><circle cx="85" cy="56" r="20" fill="#4e7a3a"/><rect x="300" y="68" width="9" height="34"/><circle cx="304" cy="64" r="17" fill="#4e7a3a"/></g><circle cx="340" cy="36" r="18" fill="#f4e3a8"/>`,
+     bannerLabel:"Nebraska City · Close &amp; Green",
+     d1:[["1:20p","Stroll historic downtown antique shops","Nebraska City NE antique shops"],["3:00p","Arbor Day Farm nature trails","Arbor Day Farm Nebraska City"],["5:00p","Check in — cozy budget inn","Nebraska City NE hotel"],["7:00p","Dinner at a downtown grill","Nebraska City NE restaurant"]],
+     d2:[["9:00a","Nebraska City Farmers Market","Nebraska City Farmers Market"],["10:30a","Alpaca / petting farm visit","alpaca farm Nebraska City NE"],["12:00p","Kimmel Orchard market &amp; lunch, then home","Kimmel Orchard Nebraska City"]],
+     costs:[["Budget inn (1 night)","$115"],["Dinner for two","$55"],["Arbor Day Farm entry (2)","$30"],["Farm / orchard + lunch","$55"],["Coffee &amp; market treats","$35"],["Gas (~100 mi)","$22"]]},
+
+    {id:"brownville-mid",name:"Brownville River Town",place:"Brownville &amp; Nebraska City · ~1 hr 20",cost:445,tier:"mid",cat:"short animals",badge:"Mid-Range",
+     why:"Nebraska's most charming river village — historic shops, a working riverboat, orchards and an alpaca farm.",
+     tags:["Riverboat","Antiques","Alpacas","Orchard","Winery"],
+     banner:`<rect width="400" height="128" fill="#9cc1d4"/><path d="M0 88 Q200 70 400 86 V128 H0 Z" fill="#6fa3b5"/><path d="M0 100 Q200 86 400 100 V128 H0 Z" fill="#4f8499"/><ellipse cx="200" cy="120" rx="200" ry="14" fill="#3d6c80"/><rect x="170" y="60" width="60" height="28" rx="3" fill="#c9744d"/><rect x="176" y="48" width="48" height="14" fill="#a85a39"/><circle cx="186" cy="100" r="9" fill="#2c4a5a"/><circle cx="214" cy="100" r="9" fill="#2c4a5a"/><rect x="60" y="76" width="20" height="20" fill="#7fa86b"/><rect x="320" y="74" width="22" height="22" fill="#6b9459"/>`,
+     bannerLabel:"Brownville · River Village",
+     d1:[["1:50p","Wander Brownville antique &amp; book shops","Brownville NE antique shops"],["3:30p","Spirit of Brownville river cruise","Spirit of Brownville riverboat"],["5:30p","Check in — historic B&amp;B / inn","Brownville NE bed and breakfast"],["7:00p","Dinner at Lyceum or Whiskey Run Winery","Whiskey Run Creek Winery Brownville"]],
+     d2:[["9:00a","Drive to Nebraska City — Arbor Day Farm","Arbor Day Farm Nebraska City"],["10:00a","Alpaca encounter + orchard tasting","alpaca farm Nebraska City NE"],["12:00p","Kimmel Orchard market &amp; lunch","Kimmel Orchard Nebraska City"],["2:00p","Easy drive home","Lincoln NE"]],
+     costs:[["Historic inn / B&amp;B","$150"],["Riverboat cruise (2)","$50"],["Dinner + winery tasting","$95"],["Farm encounter + orchard","$45"],["Lunches &amp; coffee","$60"],["Gas (~165 mi)","$35"],["Antique finds","$10"]]},
+
+    {id:"loess-mid",name:"Loess Hills Byway",place:"Western Iowa · ~2 hr 30",cost:440,tier:"mid",cat:"long animals",badge:"Mid-Range",
+     why:"A true scenic drive with a destination — one of only two loess formations on Earth. Rolling prairie ridges, bison, eagles, and tiny antique-filled towns.",
+     tags:["Bison","Eagles","Scenic Drive","Small Towns","Hiking"],
+     banner:`<rect width="400" height="128" fill="#cdb87e"/><path d="M0 70 Q100 40 200 66 T400 64 V128 H0 Z" fill="#9aa362"/><path d="M0 92 Q120 66 240 90 T400 92 V128 H0 Z" fill="#7e8a4d"/><path d="M0 110 Q140 92 280 110 T400 112 V128 H0 Z" fill="#5f6b39"/><g fill="#4a3c2c"><ellipse cx="120" cy="104" rx="16" ry="9"/><rect x="110" y="98" width="8" height="10"/><rect x="124" y="98" width="8" height="10"/><ellipse cx="250" cy="110" rx="13" ry="7"/></g><circle cx="330" cy="40" r="20" fill="#f4e3a8"/>`,
+     bannerLabel:"Loess Hills · Bison &amp; Eagles",
+     d1:[["3:00p","Reach byway near Honey Creek","Loess Hills Scenic Byway Honey Creek IA"],["3:30p","Hitchcock Nature Center hawk watch","Hitchcock Nature Center Honey Creek IA"],["5:00p","Scenic ridge road, Missouri Valley","Missouri Valley IA"],["6:00p","Check in — lodge / inn","Missouri Valley IA hotel"],["7:30p","Dinner at a local supper club","Missouri Valley IA restaurant"]],
+     d2:[["8:30a","DeSoto NWR auto tour (eagles, deer)","DeSoto National Wildlife Refuge"],["10:30a","Bison &amp; elk viewing + antiques","Moorhead IA antiques"],["12:00p","Lunch in a historic café","Missouri Valley IA cafe"],["1:30p","Scenic drive home","Lincoln NE"]],
+     costs:[["Lodge / inn (1 night)","$160"],["Dinner for two","$85"],["Nature center + refuge fees","$25"],["Lunches &amp; coffee","$60"],["Antique finds","$40"],["Gas (~330 mi)","$70"]]},
+
+    {id:"omaha-mid",name:"Omaha Market &amp; Garden",place:"Omaha, NE · ~55 min",cost:418,tier:"mid",cat:"short animals",badge:"Mid-Range",
+     why:"All the Omaha charm at a comfortable price — historic Old Market antiquing, the farmers market, a butterfly conservatory and an aquarium encounter, with a moderate hotel and a relaxed dinner. No splurge required.",
+     tags:["Antiques","Farmers Market","Butterflies","Aquarium","Old Market"],
+     banner:`<rect width="400" height="128" fill="#88a6c4"/><rect x="40" y="40" width="28" height="88" fill="#5d728a"/><rect x="80" y="20" width="34" height="108" fill="#4a5d72"/><rect x="126" y="52" width="24" height="76" fill="#6b8099"/><rect x="300" y="30" width="36" height="98" fill="#52677d"/><rect x="346" y="58" width="26" height="70" fill="#6b8099"/><g fill="#f3d27e" opacity="0.7"><rect x="88" y="34" width="6" height="6"/><rect x="100" y="50" width="6" height="6"/><rect x="310" y="44" width="6" height="6"/></g><rect x="0" y="100" width="400" height="28" fill="#3a4a5c"/><line x1="0" y1="114" x2="400" y2="114" stroke="#dfe7ee" stroke-width="3" stroke-dasharray="20 16"/>`,
+     bannerLabel:"Omaha · Market &amp; Garden",
+     d1:[["1:30p","Browse Brass Armadillo Antique Mall","Brass Armadillo Antique Mall Omaha"],["3:30p","Lauritzen Gardens butterfly conservatory","Lauritzen Gardens Omaha"],["5:30p","Check in — comfortable midtown hotel","Omaha NE hotel midtown"],["7:00p","Relaxed dinner in the Old Market","Old Market Omaha restaurants"]],
+     d2:[["9:00a","Coffee + Omaha Farmers Market (Old Market)","Omaha Farmers Market Old Market"],["11:00a","Henry Doorly aquarium / Fontenelle encounter","Fontenelle Forest Omaha"],["1:00p","Lunch, then easy drive home","Lincoln NE"]],
+     costs:[["Comfortable hotel (1 night)","$150"],["Dinner for two","$80"],["Gardens + aquarium / Fontenelle","$60"],["Lunches, coffee, market","$65"],["Antique finds","$38"],["Gas (~110 mi)","$25"]]},
+
+    {id:"omaha-treat",name:"Old Market &amp; Wildlife",place:"Omaha, NE · ~55 min",cost:528,tier:"treat",cat:"short animals spa",badge:"Treat Yourselves",
+     why:"A polished city overnight — cobblestone antiquing, a non-zoo wildlife encounter, fine dining and live theater.",
+     tags:["Antiques","Theater","Farmers Market","Butterflies"],
+     banner:`<rect width="400" height="128" fill="#88a6c4"/><rect x="40" y="40" width="28" height="88" fill="#5d728a"/><rect x="80" y="20" width="34" height="108" fill="#4a5d72"/><rect x="126" y="52" width="24" height="76" fill="#6b8099"/><rect x="300" y="30" width="36" height="98" fill="#52677d"/><rect x="346" y="58" width="26" height="70" fill="#6b8099"/><rect x="0" y="100" width="400" height="28" fill="#3a4a5c"/><line x1="0" y1="114" x2="400" y2="114" stroke="#dfe7ee" stroke-width="3" stroke-dasharray="20 16"/>`,
+     bannerLabel:"Omaha · River City",
+     d1:[["1:30p","Browse Brass Armadillo Antique Mall","Brass Armadillo Antique Mall Omaha"],["3:30p","Lauritzen Gardens butterfly conservatory","Lauritzen Gardens Omaha"],["5:30p","Check in — riverfront boutique hotel","Omaha riverfront boutique hotel"],["7:00p","Dinner at The Boiler Room","The Boiler Room Omaha"],["8:30p","Show at The Rose / Orpheum Theater","Orpheum Theater Omaha"]],
+     d2:[["9:00a","Coffee + Omaha Farmers Market","Omaha Farmers Market Old Market"],["11:00a","Fontenelle Forest raptor encounter","Fontenelle Forest Omaha"],["1:00p","Lunch, then easy drive home","Lincoln NE"]],
+     costs:[["Boutique hotel (1 night)","$185"],["Dinner for two","$120"],["Theater tickets (2)","$90"],["Gardens + Fontenelle entry","$38"],["Lunches, coffee, market","$70"],["Gas (~110 mi)","$25"]]},
+
+    {id:"kc-treat",name:"Kansas City Indulgence",place:"Kansas City, MO · ~3 hr",cost:695,tier:"treat",cat:"long animals spa",badge:"Treat Yourselves",
+     why:"The big treat — couples' spa morning, aquarium animal encounter, legendary BBQ, West Bottoms antiques, and a Broadway-caliber show.",
+     tags:["Couples Spa","Aquarium","BBQ","Theater","Antiques"],
+     banner:`<rect width="400" height="128" fill="#b58a9e"/><rect x="30" y="34" width="30" height="94" fill="#5e4a59"/><rect x="70" y="18" width="26" height="110" fill="#4a3a47"/><rect x="106" y="46" width="30" height="82" fill="#6e576a"/><rect x="150" y="28" width="24" height="100" fill="#52414f"/><rect x="250" y="40" width="30" height="88" fill="#6e576a"/><rect x="290" y="22" width="28" height="106" fill="#4a3a47"/><rect x="330" y="48" width="30" height="80" fill="#5e4a59"/><g fill="#f3d27e" opacity="0.85"><rect x="36" y="44" width="6" height="6"/><rect x="48" y="44" width="6" height="6"/><rect x="76" y="30" width="6" height="6"/><rect x="296" y="34" width="6" height="6"/><rect x="336" y="58" width="6" height="6"/></g><rect x="0" y="108" width="400" height="20" fill="#3a2e38"/>`,
+     bannerLabel:"Kansas City · The Splurge",
+     d1:[["3:30p","West Bottoms antique district","West Bottoms antiques Kansas City"],["5:30p","Check in — Country Club Plaza hotel","Country Club Plaza hotel Kansas City"],["7:00p","Dinner — Joe's KC or Jack Stack BBQ","Joe's Kansas City Bar-B-Que"],["8:30p","Show at Starlight / Kauffman Center","Kauffman Center Kansas City"]],
+     d2:[["8:30a","Couples' massage on the Plaza","spa Country Club Plaza Kansas City"],["10:30a","Sea Life Aquarium encounter","Sea Life Aquarium Kansas City"],["12:00p","Lunch + City Market farmers market","City Market Kansas City"],["1:30p","Begin scenic drive home","Lincoln NE"]],
+     costs:[["Plaza hotel (1 night)","$210"],["Couples' massage (2)","$200"],["Dinner (BBQ for two)","$80"],["Show tickets (2)","$110"],["Aquarium (2)","$50"],["Lunches &amp; coffee","$70"],["Gas (~360 mi)","$75"]]},
+
+    {id:"okoboji-treat",name:"Okoboji Lakes Retreat",place:"Spirit Lake / Okoboji, IA · ~3 hr 30",cost:692,tier:"treat",cat:"long animals spa",badge:"Treat Yourselves",
+     why:"A lakeside resort escape — Iowa's \"blue water\" Great Lakes, a couples' lakeside spa, vintage Arnolds Park, farmers market, nature trails and a bison ranch.",
+     tags:["Lakeside Spa","Bison","Farmers Market","Antiques","Nature Drive","Sunset Dinner"],
+     banner:`<defs><linearGradient id="lksky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6c98a"/><stop offset="1" stop-color="#e89a72"/></linearGradient></defs><rect width="400" height="78" fill="url(#lksky)"/><circle cx="300" cy="42" r="24" fill="#fdebc0"/><rect x="0" y="78" width="400" height="50" fill="#5fa0c0"/><path d="M0 78 Q200 70 400 78 V90 Q200 84 0 90 Z" fill="#7bb6d2" opacity="0.6"/><g opacity="0.9"><line x1="280" y1="46" x2="280" y2="78" stroke="#fff" stroke-width="2" opacity="0.5"/><line x1="320" y1="46" x2="320" y2="78" stroke="#fff" stroke-width="2" opacity="0.5"/></g><path d="M70 78 L100 78 L92 64 L78 64 Z" fill="#e8e2d2"/><rect x="83" y="50" width="2" height="16" fill="#9a8f7a"/><path d="M85 50 L85 64 L98 64 Z" fill="#fff"/><g fill="#3a6b50"><rect x="20" y="58" width="6" height="20"/><circle cx="23" cy="56" r="9"/><rect x="360" y="60" width="6" height="18"/><circle cx="363" cy="58" r="8"/></g>`,
+     bannerLabel:"Okoboji · Iowa Great Lakes",
+     d1:[["4:00p","Stroll Arnolds Park &amp; lakeside antiques","Arnolds Park Okoboji IA"],["5:00p","Check in — lakefront resort with spa","Okoboji lakefront resort spa"],["6:30p","Couples' lakeside massage at the spa","spa Okoboji IA"],["8:00p","Sunset dinner on the water at The Spilt Milk","The Spilt Milk Okoboji"]],
+     d2:[["8:30a","Coffee + Okoboji Farmers Market","Okoboji Farmers Market"],["9:30a","Wildlife trail &amp; Great Lakes nature drive","Iowa Great Lakes nature trail"],["11:00a","Bison ranch / petting farm visit","bison ranch Spirit Lake IA"],["12:30p","Lunch in historic Spirit Lake, then home","Spirit Lake IA restaurant"]],
+     costs:[["Lakefront resort (1 night)","$225"],["Couples' lakeside massage (2)","$190"],["Sunset dinner for two","$95"],["Bison ranch / farm entry","$30"],["Lunches, coffee, market","$65"],["Gas (~410 mi)","$87"]]}
+  ];
+
+  const chipClass={budget:"budget",mid:"mid",treat:"treat"};
+  const chipText={budget:"$ Budget",mid:"$$ Mid",treat:"$$$ Treat"};
+
+  function mapUrl(q){return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(q);}
+
+  // Chain every stop (Day 1 + Day 2) into one Google Maps route, starting & ending in Lincoln
+  function routeUrl(trip){
+    const stops=[...trip.d1,...trip.d2].map(r=>r[2]); // map queries in order
+    const waypoints=["Lincoln, NE", ...stops, "Lincoln, NE"];
+    const origin=encodeURIComponent(waypoints[0]);
+    const destination=encodeURIComponent(waypoints[waypoints.length-1]);
+    const mid=waypoints.slice(1,-1).map(encodeURIComponent).join('|');
+    return "https://www.google.com/maps/dir/?api=1&origin="+origin+"&destination="+destination+"&waypoints="+mid+"&travelmode=driving";
+  }
+
+  function tlRows(arr){
+    return arr.map(([t,desc,q])=>`<li><span class="t">${t}</span><span>${desc} <a class="maplink" href="${mapUrl(q)}" target="_blank" rel="noopener">Map</a></span></li>`).join('');
+  }
+  function costRows(arr,total){
+    return arr.map(([k,v])=>`<tr><td>${k}</td><td>${v}</td></tr>`).join('')+`<tr class="total"><td>Estimated Total</td><td>$${total}</td></tr>`;
+  }
+
+  // ---- BUILD CARDS ----
+  const grid=document.getElementById('grid');
+  TRIPS.forEach((t,i)=>{
+    const num=String(i+1).padStart(2,'0');
+    const card=document.createElement('div');
+    card.className='card';
+    card.dataset.cat=t.cat; card.dataset.tier=t.tier; card.dataset.id=t.id;
+    card.innerHTML=`
+      <div class="banner">
+        <svg viewBox="0 0 400 128" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">${t.banner}</svg>
+        <span class="label">${t.bannerLabel}</span>
+        <span class="price-chip ${chipClass[t.tier]}">${chipText[t.tier]}</span>
+      </div>
+      <div class="card-top">
+        <span class="badge">Option ${num} · ${t.badge}</span>
+        <h2>${t.name}</h2>
+        <div class="place">${t.place}</div>
+      </div>
+      <div class="card-body">
+        <p class="why">${t.why}</p>
+        <details open><summary>Day 1 Itinerary</summary><ul class="tl">${tlRows(t.d1)}</ul></details>
+        <details><summary>Day 2 Itinerary</summary><ul class="tl">${tlRows(t.d2)}</ul></details>
+        <details><summary>Estimated Cost</summary><table class="cost">${costRows(t.costs,t.cost)}</table></details>
+        <div class="tags">${t.tags.map(x=>`<span class="tag">${x}</span>`).join('')}</div>
+      </div>
+      <div class="card-foot"><button class="choose">Choose This Trip</button></div>`;
+    grid.appendChild(card);
+  });
+
+  // ---- FILTERS ----
+  const styleFilters=document.querySelectorAll('#styleControls .filter');
+  const budgetFilters=document.querySelectorAll('#budgetControls .filter');
+  const cards=()=>document.querySelectorAll('.card');
+  const countEl=document.getElementById('count');
+  let activeStyle='all', activeBudget='all';
+  function applyFilters(){
+    let shown=0;
+    cards().forEach(c=>{
+      const styleOk=(activeStyle==='all'||c.dataset.cat.includes(activeStyle));
+      const budgetOk=(activeBudget==='all'||c.dataset.tier===activeBudget);
+      const show=styleOk&&budgetOk; c.style.display=show?'flex':'none'; if(show)shown++;
+    });
+    countEl.innerHTML='Showing <b>'+shown+'</b> of '+TRIPS.length+' trips';
+  }
+  styleFilters.forEach(f=>f.addEventListener('click',()=>{styleFilters.forEach(x=>x.classList.remove('active'));f.classList.add('active');activeStyle=f.dataset.f;applyFilters();}));
+  budgetFilters.forEach(f=>f.addEventListener('click',()=>{budgetFilters.forEach(x=>x.classList.remove('active'));f.classList.add('active');activeBudget=f.dataset.b;applyFilters();}));
+
+  // ---- SELECTION ----
+  const bar=document.getElementById('bar');
+  const pickName=document.getElementById('pickName');
+  const pickCost=document.getElementById('pickCost');
+  let current=null;
+  document.querySelectorAll('.choose').forEach(btn=>{
+    btn.onclick=()=>{
+      const card=btn.closest('.card');
+      const trip=TRIPS.find(t=>t.id===card.dataset.id);
+      const already=btn.classList.contains('picked');
+      document.querySelectorAll('.choose').forEach(b=>{b.classList.remove('picked');b.textContent='Choose This Trip';});
+      if(already){bar.classList.remove('show');current=null;return;}
+      btn.classList.add('picked');btn.textContent='Selected';
+      current=trip;
+      pickName.innerHTML=trip.name;
+      pickCost.textContent='$'+trip.cost;
+      bar.classList.add('show');
+    };
+  });
+
+  document.getElementById('clearBtn').addEventListener('click',()=>{
+    document.querySelectorAll('.choose').forEach(b=>{b.classList.remove('picked');b.textContent='Choose This Trip';});
+    bar.classList.remove('show');current=null;
+  });
+
+  // ---- PHONE TICKET ----
+  function ptRows(arr){
+    return arr.map(([t,desc,q])=>`<div class="pt"><span class="pt-t">${t}</span><span>${desc}<a class="pt-map" href="${mapUrl(q)}" target="_blank" rel="noopener">Open in Google Maps</a></span></div>`).join('');
+  }
+  const phoneView=document.getElementById('phoneView');
+  function openTicket(trip){
+    document.getElementById('tvName').innerHTML=trip.name;
+    document.getElementById('tvPlace').innerHTML=trip.place;
+    document.getElementById('tvCost').textContent='$'+trip.cost;
+    document.getElementById('tvDay1').innerHTML=ptRows(trip.d1);
+    document.getElementById('tvDay2').innerHTML=ptRows(trip.d2);
+    phoneView.classList.add('show');document.body.style.overflow='hidden';
+  }
+  document.getElementById('viewBtn').addEventListener('click',()=>{if(current)openTicket(current);});
+  function closePhone(){phoneView.classList.remove('show');document.body.style.overflow='';}
+  document.getElementById('closeBtn').addEventListener('click',closePhone);
+  phoneView.addEventListener('click',e=>{if(e.target===phoneView)closePhone();});
+  document.getElementById('printBtn').addEventListener('click',()=>window.print());
+
+  // ---- GET DIRECTIONS (full route) ----
+  document.getElementById('dirBtn').addEventListener('click',()=>{if(current)window.open(routeUrl(current),'_blank');});
+  document.getElementById('dir2Btn').addEventListener('click',()=>{if(current)window.open(routeUrl(current),'_blank');});
+
+  // ---- SHARE LINK ----
+  const toast=document.getElementById('toast');
+  function showToast(msg){toast.textContent=msg;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),2200);}
+  function buildShareUrl(trip){
+    const base=location.href.split('#')[0].split('?')[0];
+    return base+'#trip='+encodeURIComponent(trip.id);
+  }
+  async function shareTrip(trip){
+    const url=buildShareUrl(trip);
+    const text=`Shannon & Brandi's getaway: ${trip.name.replace(/&amp;/g,'&')} (est. $${trip.cost} for two). View the full itinerary:`;
+    if(navigator.share){
+      try{await navigator.share({title:"Our Getaway Itinerary",text,url});return;}catch(e){}
+    }
+    try{
+      await navigator.clipboard.writeText(url);
+      showToast('Link copied to clipboard ✓');
+    }catch(e){
+      prompt('Copy this link to share:',url);
+    }
+  }
+  document.getElementById('shareBtn').addEventListener('click',()=>{if(current)shareTrip(current);});
+  document.getElementById('share2Btn').addEventListener('click',()=>{if(current)shareTrip(current);});
+
+  // ---- LOAD SHARED TRIP FROM URL ----
+  function loadFromHash(){
+    const m=location.hash.match(/trip=([^&]+)/);
+    if(!m)return;
+    const id=decodeURIComponent(m[1]);
+    const trip=TRIPS.find(t=>t.id===id);
+    if(!trip)return;
+    current=trip;
+    pickName.innerHTML=trip.name;pickCost.textContent='$'+trip.cost;bar.classList.add('show');
+    document.querySelectorAll('.card').forEach(c=>{
+      if(c.dataset.id===id){const b=c.querySelector('.choose');b.classList.add('picked');b.textContent='Selected';}
+    });
+    const sb=document.getElementById('sharedBanner');
+    sb.innerHTML=`📩 Shared with you: <b>${trip.name}</b> — here's the full itinerary, ready to take on the road.`;
+    sb.classList.add('show');
+    setTimeout(()=>openTicket(trip),400);
+  }
+  loadFromHash();
+  window.addEventListener('hashchange',loadFromHash);
+</script>
+</body>
+</html>
